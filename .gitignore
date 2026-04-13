@@ -1,0 +1,46 @@
+# ── 환경변수 (절대 커밋 금지) ──────────────────────
+.env
+*.env
+!.env.example
+
+# ── Java / Spring Boot ────────────────────────────
+backend/target/
+backend/build/
+backend/.gradle/
+backend/out/
+*.class
+*.jar
+*.war
+!gradle-wrapper.jar
+*.log
+
+# ── Python / FastAPI ──────────────────────────────
+crawler/venv/
+crawler/__pycache__/
+crawler/.pytest_cache/
+crawler/*.pyc
+crawler/dist/
+crawler/.eggs/
+
+# ── Node / React ──────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.next/
+
+# ── IntelliJ ──────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# ── macOS ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Docker ────────────────────────────────────────
+docker/data/
+
+# ── SQL 백업 (로컬 전용) ───────────────────────────
+*.sql.bak
+dump/
