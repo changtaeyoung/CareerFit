@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.careerfit.backend.domain.auth.mapper.AuthMapper">
+    
+    <select id="existsByEmail" parameterType="String" resultType="boolean">
+        SELECT COUNT(1) > 0
+        FROM users
+        WHERE email = #{email}
+    </select>
+
+    <insert id="save" parameterType="com.careerfit.backend.domain.user.entity.Users">
+        INSERT INTO users (email, password, name, role, created_at, updated_at)
+        VALUES (#{email}, #{password}, #{name}, #{role}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <select id="findByEmail" parameterType="String" resultType="com.careerfit.backend.domain.user.entity.Users">
+        SELECT *
+        FROM users
+        WHERE email = #{email}
+    </select>
+
+</mapper>
