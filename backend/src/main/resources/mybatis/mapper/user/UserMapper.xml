@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.careerfit.backend.domain.user.mapper.UserMapper">
+
+    <!-- 스펙 버전 관련 -->
+    <select id="selectMaxVersionNo" parameterType="Long" resultType="Integer">
+        SELECT COALESCE(MAX(version_no), 0)
+        FROM user_spec_version
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- 스펙 버전 비활성화 -->
+    <update id="updateVersionInactive" parameterType="Long">
+        UPDATE user_spec_version
+        SET is_current = FALSE
+        WHERE user_id = #{userId}
+          AND is_current = TRUE
+    </update>
+
+    <!-- 스펙 버전 삽입 -->
+    <insert id="insertSpecVersion"
+            parameterType="com.careerfit.backend.domain.user.entity.UserSpecVersion"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO user_spec_version (user_id, version_no, education, university, gpa, is_current, created_at)
+        VALUES (#{userId}, #{versionNo}, #{education}, #{university}, #{gpa}, TRUE, NOW())
+    </insert>
+
+    <!-- 현재 스펙 조회 -->
+    <select id="selectCurrentSpec" resultType="com.careerfit.backend.domain.user.entity.UserSpecVersion">
+        SELECT *
+        FROM user_spec_version
+        WHERE user_id = #{userId}
+          AND is_current = TRUE
+            LIMIT 1
+    </select>
+
+    <!-- 스펙 삭제 -->
+    <delete id="deleteSpecVersion" parameterType="Long">
+        DELETE FROM user_spec_version
+        WHERE id = #{specVersionId}
+    </delete>
+
+    <!-- 희망 직무 -->
+    <insert id="insertWantedJob"
+            parameterType="com.careerfit.backend.domain.user.entity.UserWantedJob">
+        INSERT INTO user_wanted_job (spec_version_id, job_type)
+        VALUES (#{specVersionId}, #{jobType})
+    </insert>
+
+    <!-- 기술스택 -->
+    <insert id="insertSkill"
+            parameterType="com.careerfit.backend.domain.user.entity.UserSkill">
+        INSERT INTO user_skill (spec_version_id, skill_id, proficiency)
+        VALUES (#{specVersionId}, #{skillId}, #{proficiency})
+    </insert>
+
+    <!-- 자격증 -->
+    <insert id="insertCertificate"
+            parameterType="com.careerfit.backend.domain.user.entity.UserCertificate">
+        INSERT INTO user_certificate (spec_version_id, cert_id, status, score, acquired_at)
+        VALUES (#{specVersionId}, #{certId}, #{status}, #{score}, #{acquiredAt})
+    </insert>
+
+    <!-- 어학 -->
+    <insert id="insertLanguageScore"
+            parameterType="com.careerfit.backend.domain.user.entity.UserLanguageScore">
+        INSERT INTO user_language_score (spec_version_id, lang_type, score, grade, acquired_at)
+        VALUES (#{specVersionId}, #{langType}, #{score}, #{grade}, #{acquiredAt})
+    </insert>
+
+    <!-- 경력 · 인턴 -->
+    <insert id="insertIntern"
+            parameterType="com.careerfit.backend.domain.user.entity.UserIntern">
+        INSERT INTO user_intern (spec_version_id, company_name, role, description, started_at, ended_at)
+        VALUES (#{specVersionId}, #{companyName}, #{role}, #{description}, #{startedAt}, #{endedAt})
+    </insert>
+
+    <!-- 프로젝트 -->
+    <insert id="insertProject"
+            parameterType="com.careerfit.backend.domain.user.entity.UserProject">
+        INSERT INTO user_project (spec_version_id, title, description, github_url, started_at, ended_at, status)
+        VALUES (#{specVersionId}, #{title}, #{description}, #{githubUrl}, #{startedAt}, #{endedAt}, #{status})
+    </insert>
+
+    <!-- 수상 -->
+    <insert id="insertAward"
+            parameterType="com.careerfit.backend.domain.user.entity.UserAward">
+        INSERT INTO user_award (spec_version_id, title, institution, grade, awarded_at)
+        VALUES (#{specVersionId}, #{title}, #{institution}, #{grade}, #{awardedAt})
+    </insert>
+
+    <select id="selectPasswordById" resultType="String">
+        SELECT password
+        FROM users
+        WHERE id = #{userId}
+    </select>
+
+    <update id="updatePassword">
+        UPDATE users
+        SET password   = #{password},
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <update id="updateName">
+        UPDATE users
+        SET name       = #{name},
+            updated_at = NOW()
+        WHERE id = #{userId}
+    </update>
+
+    <delete id="deleteUser">
+        DELETE FROM users
+        WHERE id = #{userId}
+    </delete>
+
+    <select id="selectWantedJobs" resultType="com.careerfit.backend.domain.user.entity.UserWantedJob">
+        SELECT * FROM user_wanted_job WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="selectSkills" resultType="com.careerfit.backend.domain.user.entity.UserSkill">
+        SELECT * FROM user_skill WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="selectCertificates" resultType="com.careerfit.backend.domain.user.entity.UserCertificate">
+        SELECT * FROM user_certificate WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="selectLanguageScores" resultType="com.careerfit.backend.domain.user.entity.UserLanguageScore">
+        SELECT * FROM user_language_score WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="selectInterns" resultType="com.careerfit.backend.domain.user.entity.UserIntern">
+        SELECT id,
+               spec_version_id,
+               company_name,
+               role,
+               description,
+               started_at,
+               ended_at
+        FROM user_intern
+        WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="selectProjects" resultType="com.careerfit.backend.domain.user.entity.UserProject">
+        SELECT id,
+               spec_version_id,
+               title,
+               description,
+               github_url,
+               started_at,
+               ended_at,
+               status
+        FROM user_project WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="selectAwards" resultType="com.careerfit.backend.domain.user.entity.UserAward">
+        SELECT id,
+               spec_version_id,
+               title,
+               institution,
+               grade,
+               awarded_at
+        FROM user_award WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="selectAllVersions"
+            resultType="com.careerfit.backend.domain.user.entity.UserSpecVersion">
+        SELECT *
+        FROM user_spec_version
+        WHERE user_id = #{userId}
+        ORDER BY version_no DESC
+    </select>
+
+    <select id="selectSpecById"
+            resultType="com.careerfit.backend.domain.user.entity.UserSpecVersion">
+        SELECT *
+        FROM user_spec_version
+        WHERE id = #{specVersionId}
+    </select>
+</mapper>
