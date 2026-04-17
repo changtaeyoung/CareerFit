@@ -30,6 +30,7 @@ public enum ErrorCode {
     // ── 기업 · 채용공고 ───────────────────────────────
     COMPANY_NOT_FOUND       (HttpStatus.NOT_FOUND,           "기업 정보를 찾을 수 없습니다"),
     POSTING_NOT_FOUND       (HttpStatus.NOT_FOUND,           "채용공고를 찾을 수 없습니다"),
+    COVER_LETTER_NOT_FOUND  (HttpStatus.NOT_FOUND,           "자기소개서를 찾을 수 없습니다"),
 
     // ── 분석 ──────────────────────────────────────────
     ANALYSIS_NOT_FOUND      (HttpStatus.NOT_FOUND,           "분석 리포트를 찾을 수 없습니다"),
