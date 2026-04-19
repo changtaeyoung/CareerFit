@@ -5,18 +5,21 @@
 <mapper namespace="com.careerfit.backend.domain.user.mapper.UserMapper">
 
     <!-- 스펙 버전 관련 -->
+    <!-- 최대 버전 번호 조회 (Soft Delete된 버전 포함)
+         삭제된 버전의 version_no를 재사용하지 않기 위해 의도적으로 필터링하지 않음 -->
     <select id="selectMaxVersionNo" parameterType="Long" resultType="Integer">
         SELECT COALESCE(MAX(version_no), 0)
         FROM user_spec_version
         WHERE user_id = #{userId}
     </select>
 
-    <!-- 스펙 버전 비활성화 -->
+    <!-- 스펙 버전 비활성화 (현재 활성 + 삭제되지 않은 버전만 대상) -->
     <update id="updateVersionInactive" parameterType="Long">
         UPDATE user_spec_version
         SET is_current = FALSE
-        WHERE user_id = #{userId}
+        WHERE user_id    = #{userId}
           AND is_current = TRUE
+          AND deleted_at IS NULL
     </update>
 
     <!-- 스펙 버전 삽입 -->
@@ -28,20 +31,27 @@
         VALUES (#{userId}, #{versionNo}, #{education}, #{university}, #{gpa}, TRUE, NOW())
     </insert>
 
-    <!-- 현재 스펙 조회 -->
+    <!-- 현재 활성 스펙 조회 (삭제되지 않은 것만) -->
     <select id="selectCurrentSpec" resultType="com.careerfit.backend.domain.user.entity.UserSpecVersion">
         SELECT *
         FROM user_spec_version
-        WHERE user_id = #{userId}
+        WHERE user_id    = #{userId}
           AND is_current = TRUE
-            LIMIT 1
+          AND deleted_at IS NULL
+        LIMIT 1
     </select>
 
-    <!-- 스펙 삭제 -->
-    <delete id="deleteSpecVersion" parameterType="Long">
-        DELETE FROM user_spec_version
-        WHERE id = #{specVersionId}
-    </delete>
+    <!-- 스펙 Soft Delete
+         물리 삭제(DELETE)는 analysis_report FK 제약으로 막힘.
+         deleted_at에 현재 시각을 찍어 논리적으로만 삭제 처리.
+         동시에 is_current도 FALSE로 내려 활성 버전 후보에서 제외시킨다. -->
+    <update id="deleteSpecVersion" parameterType="Long">
+        UPDATE user_spec_version
+        SET deleted_at = NOW(),
+            is_current = FALSE
+        WHERE id         = #{specVersionId}
+          AND deleted_at IS NULL
+    </update>
 
     <!-- 희망 직무 -->
     <insert id="insertWantedJob"
@@ -74,8 +84,8 @@
     <!-- 경력 · 인턴 -->
     <insert id="insertIntern"
             parameterType="com.careerfit.backend.domain.user.entity.UserIntern">
-        INSERT INTO user_intern (spec_version_id, company_name, role, description, started_at, ended_at)
-        VALUES (#{specVersionId}, #{companyName}, #{role}, #{description}, #{startedAt}, #{endedAt})
+        INSERT INTO user_intern (spec_version_id, company_name, employment_type, role, description, started_at, ended_at)
+        VALUES (#{specVersionId}, #{companyName}, #{employmentType}, #{role}, #{description}, #{startedAt}, #{endedAt})
     </insert>
 
     <!-- 프로젝트 -->
@@ -121,12 +131,35 @@
         SELECT * FROM user_wanted_job WHERE spec_version_id = #{specVersionId}
     </select>
 
+    <!-- 기술스택 목록 조회 (skill_dictionary JOIN으로 skillName, category 포함) -->
     <select id="selectSkills" resultType="com.careerfit.backend.domain.user.entity.UserSkill">
-        SELECT * FROM user_skill WHERE spec_version_id = #{specVersionId}
+        SELECT us.id               AS id,
+               us.spec_version_id  AS specVersionId,
+               us.skill_id         AS skillId,
+               sd.name             AS skillName,
+               sd.category         AS category,
+               us.proficiency      AS proficiency
+        FROM user_skill us
+                 JOIN skill_dictionary sd ON us.skill_id = sd.id
+        WHERE us.spec_version_id = #{specVersionId}
+        ORDER BY sd.category ASC, sd.name ASC
     </select>
 
+    <!-- 자격증 목록 조회 (cert_dictionary JOIN으로 certName, category 포함)
+         snake_case 컬럼을 camelCase 필드로 명시 매핑하여 mybatis map-underscore-to-camel-case 설정 의존 제거 -->
     <select id="selectCertificates" resultType="com.careerfit.backend.domain.user.entity.UserCertificate">
-        SELECT * FROM user_certificate WHERE spec_version_id = #{specVersionId}
+        SELECT uc.id               AS id,
+               uc.spec_version_id  AS specVersionId,
+               uc.cert_id          AS certId,
+               cd.name             AS certName,
+               cd.category         AS category,
+               uc.status           AS status,
+               uc.score            AS score,
+               uc.acquired_at      AS acquiredAt
+        FROM user_certificate uc
+                 JOIN cert_dictionary cd ON uc.cert_id = cd.id
+        WHERE uc.spec_version_id = #{specVersionId}
+        ORDER BY uc.status DESC, cd.name ASC
     </select>
 
     <select id="selectLanguageScores" resultType="com.careerfit.backend.domain.user.entity.UserLanguageScore">
@@ -137,6 +170,7 @@
         SELECT id,
                spec_version_id,
                company_name,
+               employment_type,
                role,
                description,
                started_at,
@@ -167,18 +201,83 @@
         FROM user_award WHERE spec_version_id = #{specVersionId}
     </select>
 
+    <!-- 유저의 전체 스펙 버전 목록 (Soft Delete된 것 제외) -->
     <select id="selectAllVersions"
             resultType="com.careerfit.backend.domain.user.entity.UserSpecVersion">
         SELECT *
         FROM user_spec_version
-        WHERE user_id = #{userId}
+        WHERE user_id    = #{userId}
+          AND deleted_at IS NULL
         ORDER BY version_no DESC
     </select>
 
+    <!-- 특정 스펙 버전 상세 조회 (Soft Delete된 것 제외)
+         ※ 분석 리포트에서 "이 분석 당시 스펙 보기" 기능을 만든다면
+           삭제 여부와 무관하게 조회하는 별도 메서드가 필요. -->
     <select id="selectSpecById"
             resultType="com.careerfit.backend.domain.user.entity.UserSpecVersion">
         SELECT *
         FROM user_spec_version
-        WHERE id = #{specVersionId}
+        WHERE id         = #{specVersionId}
+          AND deleted_at IS NULL
+    </select>
+
+    <!-- =====================================================
+         스펙 완성도 집계 COUNT 쿼리
+    ====================================================== -->
+    <select id="countWantedJobs" resultType="int">
+        SELECT COUNT(*) FROM user_wanted_job WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="countSkills" resultType="int">
+        SELECT COUNT(*) FROM user_skill WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="countCertificates" resultType="int">
+        SELECT COUNT(*) FROM user_certificate WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="countLanguageScores" resultType="int">
+        SELECT COUNT(*) FROM user_language_score WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="countInterns" resultType="int">
+        SELECT COUNT(*) FROM user_intern WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="countProjects" resultType="int">
+        SELECT COUNT(*) FROM user_project WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <select id="countAwards" resultType="int">
+        SELECT COUNT(*) FROM user_award WHERE spec_version_id = #{specVersionId}
+    </select>
+
+    <!-- =====================================================
+         중복 체크 쿼리 (서비스 레이어 선검증용)
+
+         자격증 중복 체크 로직:
+         - '미취득' 상태: 같은 스펙 버전에서 같은 cert_id가 이미 있으면 중복
+                         (uq_cert_unacquired 인덱스 대응)
+         - '취득' 상태: 같은 스펙 버전 + 같은 cert_id + 같은 acquired_at이면 중복
+                       (uq_cert_acquired 인덱스 대응. 날짜가 다르면 재취득으로 허용)
+    ====================================================== -->
+    <select id="countCertificateDuplicate" resultType="int">
+        SELECT COUNT(*)
+        FROM user_certificate
+        WHERE spec_version_id = #{specVersionId}
+          AND cert_id         = #{certId}
+          AND status          = #{status}
+        <if test="status == '취득'">
+          AND acquired_at = #{acquiredAt}
+        </if>
+    </select>
+
+    <!-- 어학 중복 체크 (같은 스펙 버전에 같은 lang_type이 이미 있으면 중복) -->
+    <select id="countLanguageDuplicate" resultType="int">
+        SELECT COUNT(*)
+        FROM user_language_score
+        WHERE spec_version_id = #{specVersionId}
+          AND lang_type       = #{langType}
     </select>
 </mapper>

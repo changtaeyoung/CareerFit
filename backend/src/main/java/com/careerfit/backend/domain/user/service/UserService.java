@@ -84,6 +84,13 @@ public class UserService {
         // 자격증 복수 INSERT
         if (request.getCertificates() != null) {
             for (SpecQualificationRequest.CertItem cert : request.getCertificates()) {
+                // 중복 선체크 — DB 유니크 제약보다 먼저 걸러서 명확한 에러 전달
+                int dup = userMapper.countCertificateDuplicate(
+                        specVersionId, cert.getCertId(), cert.getStatus(), cert.getAcquiredAt());
+                if (dup > 0) {
+                    throw new CustomException(ErrorCode.DUPLICATE_CERTIFICATE);
+                }
+
                 userMapper.insertCertificate(UserCertificate.builder()
                         .specVersionId(specVersionId)
                         .certId(cert.getCertId())
@@ -99,6 +106,13 @@ public class UserService {
             for (SpecQualificationRequest.LanguageItem lang : request.getLanguages()) {
 
                 validateLanguageItem(lang);
+
+                // 중복 선체크 — 같은 스펙 버전에 같은 어학 종류가 이미 있으면 거부
+                int dup = userMapper.countLanguageDuplicate(specVersionId, lang.getLangType());
+                if (dup > 0) {
+                    throw new CustomException(ErrorCode.DUPLICATE_LANGUAGE);
+                }
+
                 userMapper.insertLanguageScore(UserLanguageScore.builder()
                         .specVersionId(specVersionId)
                         .langType(lang.getLangType())
@@ -123,6 +137,7 @@ public class UserService {
                 userMapper.insertIntern(UserIntern.builder()
                         .specVersionId(specVersionId)
                         .companyName(intern.getCompanyName())
+                        .employmentType(intern.getEmploymentType())
                         .role(intern.getRole())
                         .description(intern.getDescription())
                         .startedAt(intern.getStartedAt())
@@ -162,11 +177,20 @@ public class UserService {
         log.info("[UserService] 경력/프로젝트/수상 등록 완료 - specVersionId: {}", specVersionId);
     }
 
-    // 스펙 버전 삭제
+    // 스펙 버전 Soft Delete
+    // 존재하지 않거나 이미 삭제된 스펙이면 SPEC_VERSION_NOT_FOUND 예외
     @Transactional
     public void deleteSpecVersion(Long specVersionId) {
         log.info("[UserService] 스펙 버전 삭제 - specVersionId: {}", specVersionId);
+
+        // selectSpecById는 deleted_at IS NULL 조건 포함 → 이미 삭제된 것도 null 반환
+        UserSpecVersion spec = userMapper.selectSpecById(specVersionId);
+        if (spec == null) {
+            throw new CustomException(ErrorCode.SPEC_VERSION_NOT_FOUND);
+        }
+
         userMapper.deleteSpecVersion(specVersionId);
+        log.info("[UserService] 스펙 버전 Soft Delete 완료 - specVersionId: {}", specVersionId);
     }
 
     // 비밀번호 변경
@@ -252,6 +276,56 @@ public class UserService {
                 .interns(userMapper.selectInterns(spec.getId()))
                 .projects(userMapper.selectProjects(spec.getId()))
                 .awards(userMapper.selectAwards(spec.getId()))
+                .build();
+    }
+
+    // 스펙 완성도 조회
+    // 필수 3항목(기본정보·희망직무·기술스택) 각 20점 + 선택 5항목(자격증·어학·경력·프로젝트·수상) 각 8점 = 최대 100점
+    @Transactional(readOnly = true)
+    public SpecCompletionResponse getSpecCompletion(Long specVersionId) {
+        log.info("[UserService] 스펙 완성도 조회 - specVersionId: {}", specVersionId);
+
+        UserSpecVersion spec = userMapper.selectSpecById(specVersionId);
+        if (spec == null) {
+            throw new CustomException(ErrorCode.SPEC_VERSION_NOT_FOUND);
+        }
+
+        // 필수 항목 — 기본정보는 education 또는 university 중 하나라도 있으면 등록된 것으로 판단
+        boolean hasBasicInfo  = spec.getEducation() != null || spec.getUniversity() != null;
+        boolean hasWantedJob  = userMapper.countWantedJobs(specVersionId) > 0;
+        boolean hasSkill      = userMapper.countSkills(specVersionId) > 0;
+
+        // 선택 항목 건수
+        int certCount     = userMapper.countCertificates(specVersionId);
+        int langCount     = userMapper.countLanguageScores(specVersionId);
+        int internCount   = userMapper.countInterns(specVersionId);
+        int projectCount  = userMapper.countProjects(specVersionId);
+        int awardCount    = userMapper.countAwards(specVersionId);
+
+        // 점수 계산
+        int score = 0;
+        if (hasBasicInfo) score += 20;
+        if (hasWantedJob) score += 20;
+        if (hasSkill)     score += 20;
+        if (certCount   > 0) score += 8;
+        if (langCount   > 0) score += 8;
+        if (internCount > 0) score += 8;
+        if (projectCount > 0) score += 8;
+        if (awardCount  > 0) score += 8;
+
+        log.info("[UserService] 스펙 완성도 계산 완료 - specVersionId: {}, score: {}", specVersionId, score);
+
+        return SpecCompletionResponse.builder()
+                .versionId(specVersionId)
+                .totalScore(score)
+                .hasBasicInfo(hasBasicInfo)
+                .hasWantedJob(hasWantedJob)
+                .hasSkill(hasSkill)
+                .certificateCount(certCount)
+                .languageCount(langCount)
+                .internCount(internCount)
+                .projectCount(projectCount)
+                .awardCount(awardCount)
                 .build();
     }
 }

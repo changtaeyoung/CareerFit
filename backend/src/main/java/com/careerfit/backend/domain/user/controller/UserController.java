@@ -117,4 +117,17 @@ public class UserController {
                 ApiResponse.success(userService.getSpecDetail(versionId))
         );
     }
+
+    // 스펙 완성도 정확 조회 — 필수 3항목 + 선택 5항목 기반 0~100 점수
+    @Operation(
+            summary = "스펙 완성도 조회",
+            description = "필수(기본정보·희망직무·기술스택) 각 20점 + 선택(자격증·어학·경력·프로젝트·수상) 각 8점 = 최대 100점"
+    )
+    @GetMapping("/spec/{versionId}/completion")
+    public ResponseEntity<ApiResponse<SpecCompletionResponse>> getSpecCompletion(
+            @PathVariable Long versionId) {
+
+        SpecCompletionResponse data = userService.getSpecCompletion(versionId);
+        return ResponseEntity.ok(ApiResponse.success("스펙 완성도 조회 성공", data));
+    }
 }

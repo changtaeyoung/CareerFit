@@ -74,4 +74,40 @@ public interface UserMapper {
     // 특정 버전 상세 조회
     UserSpecVersion selectSpecById(@Param("specVersionId") Long specVersionId);
 
+    // ── 스펙 완성도 집계 ──────────────────────────────
+
+    // 희망직무 등록 건수
+    int countWantedJobs(@Param("specVersionId") Long specVersionId);
+
+    // 기술스택 등록 건수
+    int countSkills(@Param("specVersionId") Long specVersionId);
+
+    // 자격증 등록 건수
+    int countCertificates(@Param("specVersionId") Long specVersionId);
+
+    // 어학 등록 건수
+    int countLanguageScores(@Param("specVersionId") Long specVersionId);
+
+    // 경력/인턴 등록 건수
+    int countInterns(@Param("specVersionId") Long specVersionId);
+
+    // 프로젝트 등록 건수
+    int countProjects(@Param("specVersionId") Long specVersionId);
+
+    // 수상 등록 건수
+    int countAwards(@Param("specVersionId") Long specVersionId);
+
+    // ── 중복 체크 (서비스 레이어 선검증용) ────────────
+
+    // 같은 스펙 버전에 이미 등록된 자격증인지 체크
+    // '미취득'은 (spec_version_id, cert_id)로 유일, '취득'은 (spec_version_id, cert_id, acquired_at)으로 유일
+    int countCertificateDuplicate(@Param("specVersionId") Long specVersionId,
+                                  @Param("certId") Long certId,
+                                  @Param("status") String status,
+                                  @Param("acquiredAt") java.time.LocalDate acquiredAt);
+
+    // 같은 스펙 버전에 이미 등록된 어학인지 체크 (lang_type 기준)
+    int countLanguageDuplicate(@Param("specVersionId") Long specVersionId,
+                               @Param("langType") String langType);
+
 }
