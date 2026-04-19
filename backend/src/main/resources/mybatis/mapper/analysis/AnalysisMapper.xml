@@ -209,11 +209,12 @@
         WHERE posting_id = #{postingId}
     </select>
 
-    <!-- 사용자의 현재 활성 스펙 버전 ID 조회 -->
+    <!-- 사용자의 현재 활성 스펙 버전 ID 조회 (Soft Delete된 것 제외) -->
     <select id="selectCurrentSpecVersionId" resultType="Long">
         SELECT id FROM user_spec_version
-        WHERE user_id = #{userId}
+        WHERE user_id    = #{userId}
           AND is_current = TRUE
+          AND deleted_at IS NULL
         LIMIT 1
     </select>
 
