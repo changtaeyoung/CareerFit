@@ -19,6 +19,9 @@ public class UserIntern {
     @Schema(description = "회사명", example = "카카오")
     private String companyName;
 
+    @Schema(description = "고용 형태 (INTERN | FULL_TIME | CONTRACT)", example = "INTERN")
+    private String employmentType;
+
     @Schema(description = "담당 직무", example = "백엔드 개발")
     private String role;
 
