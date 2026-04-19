@@ -20,6 +20,12 @@ public class UserCertificate {
     @Schema(description = "자격증 사전 ID")
     private Long certId;
 
+    @Schema(description = "자격증명 (조회 시 cert_dictionary JOIN 결과)", example = "정보처리기사")
+    private String certName;
+
+    @Schema(description = "카테고리 (조회 시 cert_dictionary JOIN 결과)", example = "IT")
+    private String category;
+
     @Schema(description = "취득 상태", example = "취득")
     private String status;
 
