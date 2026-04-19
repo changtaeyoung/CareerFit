@@ -21,12 +21,12 @@ public class CompanyService {
 
     private final CompanyMapper companyMapper;
 
-    // 업종·기업유형 필터와 페이징을 적용하여 기업 목록을 조회
+    // 업종·기업유형·키워드 필터와 페이징을 적용하여 기업 목록을 조회
     @Transactional(readOnly = true)
-    public List<CompanyResponse> getCompanyList(int page, int size, String industry, String companyType) {
-        log.info("[CompanyService] 기업 목록 조회 - page: {}, size: {}, industry: {}, companyType: {}", page, size, industry, companyType);
+    public List<CompanyResponse> getCompanyList(int page, int size, String industry, String companyType, String keyword) {
+        log.info("[CompanyService] 기업 목록 조회 - page: {}, size: {}, industry: {}, companyType: {}, keyword: {}", page, size, industry, companyType, keyword);
         int offset = (page - 1) * size;
-        return companyMapper.selectCompanyList(offset, size, industry, companyType)
+        return companyMapper.selectCompanyList(offset, size, industry, companyType, keyword)
                 .stream()
                 .map(CompanyResponse::from)
                 .toList();
@@ -65,12 +65,12 @@ public class CompanyService {
         return posting;
     }
 
-    // jobType·status 필터와 페이징을 적용하여 공고 목록을 조회
+    // jobType·status·keyword 필터와 페이징을 적용하여 공고 목록을 조회
     // status 미전달 시 과거 공고 포함 전체 반환
     @Transactional(readOnly = true)
-    public List<JobPostingResponse> getPostings(int page, int size, String jobType, String status) {
-        log.info("[CompanyService] 전체 채용공고 조회 - page: {}, size: {}, jobType: {}, status: {}", page, size, jobType, status);
+    public List<JobPostingResponse> getPostings(int page, int size, String jobType, String status, String keyword) {
+        log.info("[CompanyService] 전체 채용공고 조회 - page: {}, size: {}, jobType: {}, status: {}, keyword: {}", page, size, jobType, status, keyword);
         int offset = (page - 1) * size;
-        return companyMapper.selectPostings(offset, size, jobType, status);
+        return companyMapper.selectPostings(offset, size, jobType, status, keyword);
     }
 }

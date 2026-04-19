@@ -24,16 +24,17 @@ public class CompanyController {
     // 업종·기업유형 필터와 페이징을 적용한 기업 목록을 반환
     @Operation(
             summary = "기업 목록 조회",
-            description = "업종(industry), 기업유형(companyType) 필터 + 페이징. 필터 미전달 시 전체 조회"
+            description = "업종(industry), 기업유형(companyType), 키워드(keyword) 필터 + 페이징. 필터 미전달 시 전체 조회"
     )
     @GetMapping("/companies")
     public ResponseEntity<ApiResponse<List<CompanyResponse>>> getCompanyList(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String industry,
-            @RequestParam(required = false) String companyType) {
+            @RequestParam(required = false) String companyType,
+            @RequestParam(required = false) String keyword) {
 
-        List<CompanyResponse> data = companyService.getCompanyList(page, size, industry, companyType);
+        List<CompanyResponse> data = companyService.getCompanyList(page, size, industry, companyType, keyword);
         return ResponseEntity.ok(ApiResponse.success("기업 목록 조회 성공", data));
     }
 
@@ -66,16 +67,17 @@ public class CompanyController {
     // 전체 채용공고 목록을 반환. status 미전달 시 과거 공고 포함 전체 반환
     @Operation(
             summary = "전체 채용공고 목록",
-            description = "status 미전달 시 전체 조회 (과거 공고 포함) | ACTIVE=진행중 | CLOSED=마감 | SCHEDULED=예정"
+            description = "keyword: 공고 제목 검색 | status 미전달 시 전체 조회 (과거 공고 포함) | ACTIVE=진행중 | CLOSED=마감 | SCHEDULED=예정"
     )
     @GetMapping("/postings")
     public ResponseEntity<ApiResponse<List<JobPostingResponse>>> getPostings(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String jobType,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword) {
 
-        List<JobPostingResponse> data = companyService.getPostings(page, size, jobType, status);
+        List<JobPostingResponse> data = companyService.getPostings(page, size, jobType, status, keyword);
         return ResponseEntity.ok(ApiResponse.success(data));
     }
 
