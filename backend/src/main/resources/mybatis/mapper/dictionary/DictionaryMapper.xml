@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.careerfit.backend.domain.dictionary.mapper.DictionaryMapper">
+
+    <!-- =====================================================
+         ResultMap
+    ====================================================== -->
+    <resultMap id="CertDictionaryMap"
+               type="com.careerfit.backend.domain.dictionary.dto.CertDictionaryResponse">
+        <id     property="id"       column="id"/>
+        <result property="name"     column="name"/>
+        <result property="issuer"   column="issuer"/>
+        <result property="category" column="category"/>
+    </resultMap>
+
+    <!-- =====================================================
+         자격증 사전 조회
+         category 미전달 시 어학(category='어학') 제외한 전체
+         category 전달 시 해당 카테고리만
+    ====================================================== -->
+    <select id="selectCerts" resultMap="CertDictionaryMap">
+        SELECT id, name, issuer, category
+        FROM cert_dictionary
+        <where>
+            <choose>
+                <when test="category != null and category != ''">
+                    AND category = #{category}
+                </when>
+                <otherwise>
+                    AND category != '어학'
+                </otherwise>
+            </choose>
+        </where>
+        ORDER BY category ASC, name ASC
+    </select>
+
+    <!-- =====================================================
+         어학 사전 조회 (category='어학' 필터)
+    ====================================================== -->
+    <select id="selectLanguages" resultMap="CertDictionaryMap">
+        SELECT id, name, issuer, category
+        FROM cert_dictionary
+        WHERE category = '어학'
+        ORDER BY name ASC
+    </select>
+
+    <!-- =====================================================
+         기술스택 사전 조회
+         category 전달 시 해당 카테고리만, 미전달 시 전체
+    ====================================================== -->
+    <resultMap id="SkillDictionaryMap"
+               type="com.careerfit.backend.domain.dictionary.dto.SkillDictionaryResponse">
+        <id     property="id"       column="id"/>
+        <result property="name"     column="name"/>
+        <result property="category" column="category"/>
+    </resultMap>
+
+    <select id="selectSkills" resultMap="SkillDictionaryMap">
+        SELECT id, name, category
+        FROM skill_dictionary
+        <where>
+            <if test="category != null and category != ''">
+                AND category = #{category}
+            </if>
+        </where>
+        ORDER BY category ASC, name ASC
+    </select>
+
+</mapper>
