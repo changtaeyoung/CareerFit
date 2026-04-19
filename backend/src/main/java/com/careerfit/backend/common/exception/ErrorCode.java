@@ -22,15 +22,22 @@ public enum ErrorCode {
 
     // ── 입력값 검증 ───────────────────────────────────
     INVALID_INPUT           (HttpStatus.BAD_REQUEST,         "입력값이 올바르지 않습니다"),
+    DATA_INTEGRITY_VIOLATION(HttpStatus.CONFLICT,            "데이터 정합성 제약을 위반했습니다"),
 
     // ── 스펙 · 사용자 ─────────────────────────────────
     SPEC_NOT_FOUND          (HttpStatus.NOT_FOUND,           "스펙 정보가 등록되지 않았습니다"),
     SPEC_VERSION_NOT_FOUND  (HttpStatus.NOT_FOUND,           "해당 스펙 버전을 찾을 수 없습니다"),
+    DUPLICATE_CERTIFICATE   (HttpStatus.CONFLICT,            "이미 등록된 자격증입니다"),
+    DUPLICATE_LANGUAGE      (HttpStatus.CONFLICT,            "이미 등록된 어학 성적입니다"),
 
     // ── 기업 · 채용공고 ───────────────────────────────
     COMPANY_NOT_FOUND       (HttpStatus.NOT_FOUND,           "기업 정보를 찾을 수 없습니다"),
     POSTING_NOT_FOUND       (HttpStatus.NOT_FOUND,           "채용공고를 찾을 수 없습니다"),
     COVER_LETTER_NOT_FOUND  (HttpStatus.NOT_FOUND,           "자기소개서를 찾을 수 없습니다"),
+
+    // ── 북마크 ────────────────────────────────────────
+    BOOKMARK_NOT_FOUND      (HttpStatus.NOT_FOUND,           "북마크를 찾을 수 없습니다"),
+    DUPLICATE_BOOKMARK      (HttpStatus.CONFLICT,            "이미 북마크한 대상입니다"),
 
     // ── 분석 ──────────────────────────────────────────
     ANALYSIS_NOT_FOUND      (HttpStatus.NOT_FOUND,           "분석 리포트를 찾을 수 없습니다"),
