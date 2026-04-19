@@ -60,11 +60,20 @@ public class UserService {
         // 기술스택 복수 INSERT
         if (request.getSkills() != null) {
             for (SpecBasicRequest.SkillItem skill : request.getSkills()) {
-                userMapper.insertSkill(UserSkill.builder()
-                        .specVersionId(versionId)
-                        .skillId(skill.getSkillId())
-                        .proficiency(skill.getProficiency())
-                        .build());
+
+                if (skill.getProficiency() != null) {
+                    switch (skill.getProficiency()) {
+                        case "초급" -> skill.setProficiency("하");
+                        case "중급" -> skill.setProficiency("중");
+                        case "상급" -> skill.setProficiency("상");
+                    }
+
+                    userMapper.insertSkill(UserSkill.builder()
+                            .specVersionId(versionId)
+                            .skillId(skill.getSkillId())
+                            .proficiency(skill.getProficiency())
+                            .build());
+                }
             }
         }
 
