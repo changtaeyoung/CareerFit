@@ -13,7 +13,7 @@ spring:
       connection-timeout: 30000
 
   jackson:
-정    default-property-inclusion: non_null
+    default-property-inclusion: non_null
 
 mybatis:
   mapper-locations: classpath:mybatis/mapper/**/*.xml
