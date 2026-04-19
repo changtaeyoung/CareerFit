@@ -33,4 +33,7 @@ public class UserSpecVersion {
     private Boolean isCurrent;
 
     private LocalDateTime createdAt;
+
+    @Schema(description = "Soft Delete 시각 (NULL이면 활성)", example = "null")
+    private LocalDateTime deletedAt;
 }
