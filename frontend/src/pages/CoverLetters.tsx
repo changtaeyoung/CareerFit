@@ -31,7 +31,7 @@ export default function CoverLetters() {
         const fetchPostings = async () => {
             try {
                 const data = await getPostings(1, 100);
-                setPostings(data);
+                setPostings(data.content);
             } catch {
                 setPostings([]);
             } finally {

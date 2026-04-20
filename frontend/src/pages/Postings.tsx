@@ -34,6 +34,7 @@ export default function Postings() {
     const navigate = useNavigate();
     const { isBookmarked, toggleBookmark } = useBookmarkStore();
     const [postings, setPostings] = useState<JobPostingResponse[]>([]);
+    const [totalPages, setTotalPages] = useState(1);  // 백엔드 응답 기반 동적 계산
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [jobType, setJobType] = useState('');
@@ -45,9 +46,11 @@ export default function Postings() {
             setLoading(true);
             try {
                 const data = await getPostings(page, pageSize, jobType || undefined, status || undefined);
-                setPostings(data);
+                setPostings(data.content);
+                setTotalPages(data.totalPages);
             } catch {
                 setPostings([]);
+                setTotalPages(1);
             } finally {
                 setLoading(false);
             }
@@ -162,7 +165,7 @@ export default function Postings() {
                 </div>
             )}
 
-            <Pagination currentPage={page} totalPages={10} onPageChange={setPage} />
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
     );
 }

@@ -20,18 +20,20 @@ const industryOptions = [
     { value: '기타', label: '기타' },
 ];
 
+// DDL ck_company_type 제약과 일치해야 함
 const typeOptions = [
-    { value: '대기업', label: '대기업' },
-    { value: '공기업', label: '공기업' },
-    { value: '금융지주', label: '금융지주' },
-    { value: '중견기업', label: '중견기업' },
-    { value: '스타트업', label: '스타트업' },
+    { value: '시중은행', label: '시중은행' },
+    { value: '특수은행', label: '특수은행' },
+    { value: '대기업',   label: '대기업' },
+    { value: '핀테크',   label: '핀테크' },
+    { value: '공기업',   label: '공기업' },
 ];
 
 export default function Companies() {
     const navigate = useNavigate();
     const { isBookmarked, toggleBookmark } = useBookmarkStore();
     const [companies, setCompanies] = useState<CompanyResponse[]>([]);
+    const [totalPages, setTotalPages] = useState(1);  // 백엔드 응답 기반 동적 계산
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [industry, setIndustry] = useState('');
@@ -43,9 +45,11 @@ export default function Companies() {
             setLoading(true);
             try {
                 const data = await getCompanyList(page, pageSize, industry || undefined, companyType || undefined);
-                setCompanies(data);
+                setCompanies(data.content);
+                setTotalPages(data.totalPages);
             } catch {
                 setCompanies([]);
+                setTotalPages(1);
             } finally {
                 setLoading(false);
             }
@@ -155,7 +159,7 @@ export default function Companies() {
                 </div>
             )}
 
-            <Pagination currentPage={page} totalPages={10} onPageChange={setPage} />
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
     );
 }

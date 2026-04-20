@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
     ArrowLeft, Globe, MapPin, Users, Calendar,
-    Eye, Target, Briefcase, Building2, ExternalLink
+    Eye, Target, Briefcase, Building2, ExternalLink, Wallet
 } from 'lucide-react';
 import { getCompanyDetail, getPostingsByCompany } from '../api/company';
 import type { CompanyDetailResponse, JobPostingResponse } from '../api/company';
@@ -151,6 +151,33 @@ export default function CompanyDetail() {
                     animate={{ opacity: 1 }}
                     className="grid grid-cols-1 md:grid-cols-2 gap-6"
                 >
+                    {/* 연봉 카드 — 항상 노출, 데이터 없으면 '-' 표시 */}
+                    <div className="glass-card p-6 md:col-span-2">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Wallet className="w-5 h-5 text-emerald-500" />
+                            <h3 className="font-semibold text-surface-800 dark:text-surface-200">연봉 정보</h3>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <SalaryBlock
+                                label="신입 초봉"
+                                amount={company.salary?.entrySalary ?? null}
+                                year={company.salary?.entryYear ?? null}
+                                source={company.salary?.entrySource ?? null}
+                            />
+                            <SalaryBlock
+                                label="평균 연봉"
+                                amount={company.salary?.averageSalary ?? null}
+                                year={company.salary?.averageYear ?? null}
+                                source={company.salary?.averageSource ?? null}
+                            />
+                        </div>
+                        {!company.salary && (
+                            <p className="text-xs text-surface-400 dark:text-surface-500 mt-3">
+                                ※ 연봉 데이터가 아직 수집되지 않았습니다
+                            </p>
+                        )}
+                    </div>
+
                     {company.vision && (
                         <div className="glass-card p-6">
                             <div className="flex items-center gap-2 mb-3">
@@ -229,3 +256,48 @@ export default function CompanyDetail() {
         </div>
     );
 }
+
+// 연봉 블록 한 칸 (신입 초봉 / 평균 연봉 각각 하나씩)
+// amount가 null이면 '-'를 크게 표시하여 데이터 부재를 명확히 알림
+function SalaryBlock({
+    label,
+    amount,
+    year,
+    source,
+}: {
+    label: string;
+    amount: number | null;
+    year: number | null;
+    source: string | null;
+}) {
+    // 만원 단위 금액을 "5,000만원" 형태로 포매팅. null이면 '-' 표시
+    const formatted = amount != null
+        ? `${amount.toLocaleString()}만원`
+        : '-';
+
+    const sourceLabel = source ? sourceLabelMap[source] ?? source : null;
+
+    return (
+        <div className="rounded-xl bg-surface-50 dark:bg-surface-800/40 p-4">
+            <p className="text-xs text-surface-500 dark:text-surface-400">{label}</p>
+            <p className="text-2xl font-bold text-surface-900 dark:text-surface-50 mt-1">
+                {formatted}
+            </p>
+            {amount != null && year && sourceLabel && (
+                <p className="text-xs text-surface-400 dark:text-surface-500 mt-1.5">
+                    {year}년 · {sourceLabel}
+                </p>
+            )}
+        </div>
+    );
+}
+
+// 출처 코드 → 한글 라벨 변환
+// 사용자에게는 "ALIO_API" 같은 코드 대신 "ALIO 공시"처럼 읽기 쉬운 라벨을 노출
+const sourceLabelMap: Record<string, string> = {
+    ALIO_API:   'ALIO 공시',
+    ALIO_CRAWL: 'ALIO 공시',
+    DART_API:   'DART 공시',
+    POSTING:    '채용공고',
+    MANUAL:     '관리자 입력',
+};
