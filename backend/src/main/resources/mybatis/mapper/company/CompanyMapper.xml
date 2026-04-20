@@ -41,7 +41,8 @@
 
     <!-- =====================================================
          기업 목록 조회 (페이징 + 필터 + 키워드 검색)
-    ====================================================== -->    <select id="selectCompanyList" resultMap="CompanyResultMap">
+    ====================================================== -->
+    <select id="selectCompanyList" resultMap="CompanyResultMap">
         SELECT *
         FROM company
         <where>
@@ -57,6 +58,23 @@
         </where>
         ORDER BY name ASC
         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 기업 목록 전체 건수 (totalPages 계산용, selectCompanyList와 동일 WHERE 조건) -->
+    <select id="countCompanyList" resultType="int">
+        SELECT COUNT(*)
+        FROM company
+        <where>
+            <if test="industry != null and industry != ''">
+                AND industry = #{industry}
+            </if>
+            <if test="companyType != null and companyType != ''">
+                AND company_type = #{companyType}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
     </select>
 
     <!-- =====================================================
@@ -90,8 +108,6 @@
 
     <!-- =====================================================
          전체 채용공고 목록 (페이징 + 직무/상태/키워드 필터)
-         status 미전달 시 전체, ACTIVE 전달 시 진행중만
-         keyword: 공고 제목(title) 또는 기업명(company.name) LIKE 검색
     ====================================================== -->
     <select id="selectPostings" resultMap="JobPostingResponseMap">
         SELECT jp.id,
@@ -120,6 +136,25 @@
         </where>
         ORDER BY jp.created_at DESC
         LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 채용공고 전체 건수 (totalPages 계산용, selectPostings와 동일 WHERE 조건) -->
+    <select id="countPostings" resultType="int">
+        SELECT COUNT(*)
+        FROM job_posting jp
+                 JOIN company c ON jp.company_id = c.id
+        <where>
+            <if test="status != null and status != ''">
+                AND jp.status = #{status}
+            </if>
+            <if test="jobType != null and jobType != ''">
+                AND jp.job_type = #{jobType}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (jp.title LIKE CONCAT('%', #{keyword}, '%')
+                    OR c.name  LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
     </select>
 
     <!-- =====================================================

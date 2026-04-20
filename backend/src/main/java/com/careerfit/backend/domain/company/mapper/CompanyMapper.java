@@ -17,6 +17,11 @@ public interface CompanyMapper {
                                     @Param("companyType") String companyType,
                                     @Param("keyword") String keyword);
 
+    // 기업 목록 전체 건수 (페이지네이션 totalPages 계산용)
+    int countCompanyList(@Param("industry") String industry,
+                         @Param("companyType") String companyType,
+                         @Param("keyword") String keyword);
+
     // 기업 상세 조회
     Company selectCompanyById(@Param("id") Long id);
 
@@ -32,4 +37,9 @@ public interface CompanyMapper {
                                             @Param("jobType") String jobType,
                                             @Param("status") String status,
                                             @Param("keyword") String keyword);
+
+    // 채용공고 전체 건수 (페이지네이션 totalPages 계산용)
+    int countPostings(@Param("jobType") String jobType,
+                      @Param("status") String status,
+                      @Param("keyword") String keyword);
 }

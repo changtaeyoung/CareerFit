@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
 
-@Schema(description = "기업 상세 응답 DTO (vision, 인재상, 사업개요 포함)")
+@Schema(description = "기업 상세 응답 DTO (vision, 인재상, 사업개요, 연봉 포함)")
 @Getter
 @Builder
 public class CompanyDetailResponse {
@@ -46,8 +46,12 @@ public class CompanyDetailResponse {
     @Schema(description = "사업 개요", example = "IBK기업은행은 중소기업 전문 국책은행으로...")
     private String businessOverview;
 
-    // Company 엔티티를 상세 응답 DTO로 변환 (vision, talentImage, businessOverview 포함)
-    public static CompanyDetailResponse from(Company company) {
+    @Schema(description = "연봉 요약 정보 (최신 연도 기준, 데이터 없으면 null)")
+    private CompanySalaryResponse salary;
+
+    // Company 엔티티 + 별도 조회한 연봉 정보를 조합하여 상세 응답 DTO 생성
+    // salary는 null일 수 있음 (연봉 데이터 자체가 없는 기업)
+    public static CompanyDetailResponse from(Company company, CompanySalaryResponse salary) {
         return CompanyDetailResponse.builder()
                 .id(company.getId())
                 .name(company.getName())
@@ -61,6 +65,8 @@ public class CompanyDetailResponse {
                 .vision(company.getVision())
                 .talentImage(company.getTalentImage())
                 .businessOverview(company.getBusinessOverview())
+                .salary(salary)
                 .build();
     }
 }
+
