@@ -11,4 +11,6 @@ public interface AuthMapper {
     void save(Users user);
 
     Users findByEmail(String email);
+
+    Users findById(Long id);
 }

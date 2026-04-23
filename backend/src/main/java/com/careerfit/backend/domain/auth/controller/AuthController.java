@@ -3,6 +3,7 @@ package com.careerfit.backend.domain.auth.controller;
 import com.careerfit.backend.common.response.ApiResponse;
 import com.careerfit.backend.domain.auth.dto.LoginRequest;
 import com.careerfit.backend.domain.auth.dto.RegisterRequest;
+import com.careerfit.backend.domain.auth.dto.TokenRefreshRequest;
 import com.careerfit.backend.domain.auth.dto.TokenResponse;
 import com.careerfit.backend.domain.auth.service.AuthService;
 import jakarta.validation.Valid;
@@ -32,6 +33,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest){
         TokenResponse tokenResponse = authService.login(loginRequest);
+        return ResponseEntity.ok(ApiResponse.success(tokenResponse));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@Valid @RequestBody TokenRefreshRequest refreshRequest) {
+        TokenResponse tokenResponse = authService.refreshToken(refreshRequest);
         return ResponseEntity.ok(ApiResponse.success(tokenResponse));
     }
 }

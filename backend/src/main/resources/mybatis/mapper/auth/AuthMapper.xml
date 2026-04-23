@@ -21,4 +21,10 @@
         WHERE email = #{email}
     </select>
 
+    <select id="findById" parameterType="Long" resultType="com.careerfit.backend.domain.user.entity.Users">
+        SELECT *
+        FROM users
+        WHERE id = #{id}
+    </select>
+
 </mapper>

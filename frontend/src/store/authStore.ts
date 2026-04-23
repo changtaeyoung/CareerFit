@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { jwtDecode } from 'jwt-decode';
 
 interface User {
     userId: number;
@@ -23,9 +24,30 @@ const getStoredUser = (): User | null => {
     }
 };
 
+// localStorage에서 엑세스 토큰 확인 및 만료 여부 검사
+const checkAuthStatus = (): boolean => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return false;
+    
+    try {
+        const decoded = jwtDecode(token);
+        // exp는 초 단위이므로 1000을 곱해서 밀리초로 변환
+        if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+            // 토큰 만료됨
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
+    }
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
     user: getStoredUser(),
-    isAuthenticated: !!localStorage.getItem('accessToken'),
+    isAuthenticated: checkAuthStatus(),
 
     setAuth: (user, accessToken, refreshToken) => {
         localStorage.setItem('accessToken', accessToken);

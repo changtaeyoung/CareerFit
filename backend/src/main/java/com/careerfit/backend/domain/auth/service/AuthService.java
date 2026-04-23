@@ -5,6 +5,7 @@ import com.careerfit.backend.common.exception.ErrorCode;
 import com.careerfit.backend.common.jwt.JwtProvider;
 import com.careerfit.backend.domain.auth.dto.LoginRequest;
 import com.careerfit.backend.domain.auth.dto.RegisterRequest;
+import com.careerfit.backend.domain.auth.dto.TokenRefreshRequest;
 import com.careerfit.backend.domain.auth.dto.TokenResponse;
 import com.careerfit.backend.domain.auth.mapper.AuthMapper;
 import com.careerfit.backend.domain.user.entity.Users;
@@ -90,6 +91,44 @@ public class AuthService {
         return TokenResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .userId(user.getId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .build();
+    }
+
+    public TokenResponse refreshToken(TokenRefreshRequest request) {
+        String refreshToken = request.getRefreshToken();
+        
+        // Refresh Token 검증
+        jwtProvider.validateToken(refreshToken);
+        
+        // 토큰에서 유저 정보 추출
+        Long userId = jwtProvider.getUserId(refreshToken);
+        
+        // DB에서 유저 조회 (유효한 유저인지 재확인)
+        Users user = authMapper.findById(userId);
+        if (user == null) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+        
+        // 새로운 Authentication 객체 생성
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                new com.careerfit.backend.common.jwt.CustomUserDetails(
+                        user.getId(), user.getEmail(), user.getPassword(), user.getRole()
+                ),
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
+        );
+        
+        // 새 토큰 발급
+        String newAccessToken = jwtProvider.generateAccessToken(authentication);
+        String newRefreshToken = jwtProvider.generateRefreshToken(authentication);
+        
+        log.info("[AuthService] 토큰 갱신 완료 - userId: {}", userId);
+        return TokenResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
                 .userId(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
