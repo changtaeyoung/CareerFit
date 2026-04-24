@@ -65,7 +65,7 @@ public class UserService {
                     switch (skill.getProficiency()) {
                         case "초급" -> skill.setProficiency("하");
                         case "중급" -> skill.setProficiency("중");
-                        case "상급" -> skill.setProficiency("상");
+                        case "고급" -> skill.setProficiency("상");
                     }
 
                     userMapper.insertSkill(UserSkill.builder()
