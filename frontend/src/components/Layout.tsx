@@ -26,7 +26,7 @@ const navGroups = [
         items: [
             { path: '/spec', icon: FileText, label: '내 스펙' },
             { path: '/analysis/history', icon: BarChart3, label: '핏 분석' },
-            { path: '/cover-letters', icon: PenLine, label: '자소서' },
+            { path: '/cover-letters', icon: PenLine, label: '자기소개서' },
         ],
     },
     {
