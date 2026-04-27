@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.careerfit.backend.domain.analysis.mapper.AnalysisMapper">
+
+    <!-- =====================================================
+         ResultMap
+    ====================================================== -->
+    <resultMap id="ReportResultMap" type="com.careerfit.backend.domain.analysis.entity.AnalysisReport">
+        <id     property="id"                 column="id"/>
+        <result property="userId"             column="user_id"/>
+        <result property="companyId"          column="company_id"/>
+        <result property="jobPostingId"       column="job_posting_id"/>
+        <result property="specVersionId"      column="spec_version_id"/>
+        <result property="requiredAllMet"     column="required_all_met"/>
+        <result property="baseScore"          column="base_score"/>
+        <result property="quantitativeBonus"  column="quantitative_bonus"/>
+        <result property="qualitativeBonus"   column="qualitative_bonus"/>
+        <result property="totalScore"         column="total_score"/>
+        <result property="status"             column="status"/>
+        <result property="createdAt"          column="created_at"/>
+        <result property="strengths"          column="strengths"/>
+        <result property="weaknesses"         column="weaknesses"/>
+        <result property="aiFeedback"         column="ai_feedback"/>
+    </resultMap>
+
+    <resultMap id="GapResultMap" type="com.careerfit.backend.domain.analysis.entity.AnalysisGap">
+        <id     property="id"               column="id"/>
+        <result property="reportId"         column="report_id"/>
+        <result property="gapType"          column="gap_type"/>
+        <result property="requirementType"  column="requirement_type"/>
+        <result property="itemName"         column="item_name"/>
+        <result property="status"           column="status"/>
+        <result property="requiredValue"    column="required_value"/>
+        <result property="userValue"        column="user_value"/>
+        <result property="bonusScore"       column="bonus_score"/>
+        <result property="description"      column="description"/>
+    </resultMap>
+
+    <resultMap id="RecommendationResultMap" type="com.careerfit.backend.domain.analysis.entity.AnalysisRecommendation">
+        <id     property="id"                 column="id"/>
+        <result property="reportId"           column="report_id"/>
+        <result property="priority"           column="priority"/>
+        <result property="category"           column="category"/>
+        <result property="content"            column="content"/>
+        <result property="expectedScoreGain"  column="expected_score_gain"/>
+        <result property="sortOrder"          column="sort_order"/>
+    </resultMap>
+
+    <resultMap id="HistoryResultMap" type="com.careerfit.backend.domain.analysis.dto.AnalysisHistoryResponse">
+        <result property="reportId"       column="id"/>
+        <result property="companyName"    column="company_name"/>
+        <result property="postingTitle"   column="posting_title"/>
+        <result property="requiredAllMet" column="required_all_met"/>
+        <result property="totalScore"     column="total_score"/>
+        <result property="status"         column="status"/>
+        <result property="createdAt"      column="created_at"/>
+    </resultMap>
+
+    <resultMap id="JobRequiredCertRowMap"
+               type="com.careerfit.backend.domain.analysis.mapper.AnalysisMapper$JobRequiredCertRow">
+        <result property="certId"           column="cert_id"/>
+        <result property="certName"         column="cert_name"/>
+        <result property="requirementType"  column="requirement_type"/>
+    </resultMap>
+
+    <resultMap id="JobSkillRowMap"
+               type="com.careerfit.backend.domain.analysis.mapper.AnalysisMapper$JobSkillRow">
+        <result property="skillId"          column="skill_id"/>
+        <result property="skillName"        column="skill_name"/>
+        <result property="requirementType"  column="requirement_type"/>
+    </resultMap>
+
+    <resultMap id="JobLanguageRowMap"
+               type="com.careerfit.backend.domain.analysis.mapper.AnalysisMapper$JobLanguageRow">
+        <result property="langType"   column="lang_type"/>
+        <result property="minScore"   column="min_score"/>
+        <result property="minGrade"   column="min_grade"/>
+    </resultMap>
+
+    <!-- =====================================================
+         analysis_report INSERT / UPDATE / SELECT / DELETE
+    ====================================================== -->
+    <!-- PENDING 상태로 리포트를 먼저 저장하고 생성된 id를 주입 -->
+    <insert id="insertReport"
+            parameterType="com.careerfit.backend.domain.analysis.entity.AnalysisReport"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO analysis_report
+            (user_id, job_posting_id, spec_version_id, company_id,
+             required_all_met, base_score, quantitative_bonus, qualitative_bonus,
+             total_score, pass_probability, status, created_at)
+        SELECT
+            #{userId},
+            #{jobPostingId},
+            #{specVersionId},
+            jp.company_id,
+            false, 0, 0, 0, 0, 0,
+            #{status},
+            NOW()
+        FROM job_posting jp
+        WHERE jp.id = #{jobPostingId}
+    </insert>
+
+    <!-- 분석 완료 후 점수, 상태, AI 피드백을 업데이트 -->
+    <update id="updateReportResult">
+        UPDATE analysis_report
+        SET required_all_met    = #{requiredAllMet},
+            base_score          = #{baseScore},
+            quantitative_bonus  = #{quantitativeBonus},
+            qualitative_bonus   = #{qualitativeBonus},
+            total_score         = #{totalScore},
+            status              = #{status},
+            strengths           = #{strengths},
+            weaknesses          = #{weaknesses},
+            ai_feedback         = #{aiFeedback}
+        WHERE id = #{reportId}
+    </update>
+
+    <!-- 히스토리 목록 조회 — 기업명, 공고 제목 JOIN -->
+    <select id="selectHistoryByUserId" resultMap="HistoryResultMap">
+        SELECT ar.id,
+               c.name                AS company_name,
+               jp.title              AS posting_title,
+               ar.required_all_met,
+               ar.total_score,
+               ar.status,
+               ar.created_at
+        FROM analysis_report ar
+                 JOIN job_posting jp ON ar.job_posting_id = jp.id
+                 JOIN company c      ON jp.company_id = c.id
+        WHERE ar.user_id = #{userId}
+        ORDER BY ar.created_at DESC
+    </select>
+
+    <!-- 리포트 단건 조회 -->
+    <select id="selectReportById" resultMap="ReportResultMap">
+        SELECT *
+        FROM analysis_report
+        WHERE id = #{reportId}
+    </select>
+
+    <!-- 리포트 삭제 (cascade로 gap, recommendation 자동 삭제) -->
+    <delete id="deleteReport">
+        DELETE
+        FROM analysis_report
+        WHERE id = #{reportId}
+    </delete>
+
+    <!-- =====================================================
+         analysis_gap INSERT / SELECT
+    ====================================================== -->
+    <insert id="insertGap" parameterType="com.careerfit.backend.domain.analysis.entity.AnalysisGap">
+        INSERT INTO analysis_gap
+            (report_id, gap_type, requirement_type, item_name, status,
+             required_value, user_value, bonus_score, description)
+        VALUES
+            (#{reportId}, #{gapType}, #{requirementType}, #{itemName}, #{status},
+             #{requiredValue}, #{userValue}, #{bonusScore}, #{description})
+    </insert>
+
+    <select id="selectGapsByReportId" resultMap="GapResultMap">
+        SELECT *
+        FROM analysis_gap
+        WHERE report_id = #{reportId}
+        ORDER BY requirement_type DESC, gap_type ASC
+    </select>
+
+    <!-- =====================================================
+         analysis_recommendation INSERT / SELECT
+    ====================================================== -->
+    <insert id="insertRecommendation"
+            parameterType="com.careerfit.backend.domain.analysis.entity.AnalysisRecommendation">
+        INSERT INTO analysis_recommendation
+            (report_id, priority, category, content, expected_score_gain, sort_order)
+        VALUES
+            (#{reportId}, #{priority}, #{category}, #{content}, #{expectedScoreGain}, #{sortOrder})
+    </insert>
+
+    <select id="selectRecommendationsByReportId" resultMap="RecommendationResultMap">
+        SELECT *
+        FROM analysis_recommendation
+        WHERE report_id = #{reportId}
+        ORDER BY sort_order ASC
+    </select>
+
+    <!-- =====================================================
+         분석용 공고 요건 조회
+    ====================================================== -->
+    <!-- 공고의 자격증 요건 조회 (cert_dictionary JOIN으로 이름 포함) -->
+    <select id="selectRequiredCerts" resultMap="JobRequiredCertRowMap">
+        SELECT jrc.cert_id,
+               cd.name AS cert_name,
+               jrc.requirement_type
+        FROM job_required_cert jrc
+                 JOIN cert_dictionary cd ON jrc.cert_id = cd.id
+        WHERE jrc.posting_id = #{postingId}
+    </select>
+
+    <!-- 공고의 기술스택 요건 조회 (skill_dictionary JOIN으로 이름 포함) -->
+    <select id="selectRequiredSkills" resultMap="JobSkillRowMap">
+        SELECT js.skill_id,
+               sd.name AS skill_name,
+               js.requirement_type
+        FROM job_skill js
+                 JOIN skill_dictionary sd ON js.skill_id = sd.id
+        WHERE js.posting_id = #{postingId}
+    </select>
+
+    <!-- 공고의 어학 요건 조회 -->
+    <select id="selectRequiredLanguages" resultMap="JobLanguageRowMap">
+        SELECT lang_type, min_score, min_grade
+        FROM job_language_requirement
+        WHERE posting_id = #{postingId}
+    </select>
+
+    <!-- 사용자의 현재 활성 스펙 버전 ID 조회 (Soft Delete된 것 제외) -->
+    <select id="selectCurrentSpecVersionId" resultType="Long">
+        SELECT id FROM user_spec_version
+        WHERE user_id    = #{userId}
+          AND is_current = TRUE
+          AND deleted_at IS NULL
+        LIMIT 1
+    </select>
+
+    <!-- =====================================================
+         사전 체크용 — 미충족 필수 조건 조회
+    ====================================================== -->
+    <!-- 공고 필수 자격증 중 사용자가 보유하지 않은 항목만 반환 -->
+    <select id="selectMissingRequiredCerts" resultMap="JobRequiredCertRowMap">
+        SELECT jrc.cert_id,
+               cd.name AS cert_name,
+               jrc.requirement_type
+        FROM job_required_cert jrc
+                 JOIN cert_dictionary cd ON jrc.cert_id = cd.id
+        WHERE jrc.posting_id    = #{postingId}
+          AND jrc.requirement_type = 'REQUIRED'
+          AND jrc.cert_id NOT IN (
+              SELECT uc.cert_id
+              FROM user_certificate uc
+              WHERE uc.spec_version_id = #{specVersionId}
+          )
+    </select>
+
+    <!-- 공고 어학 요건 중 사용자가 기준을 충족하지 못하는 항목만 반환
+         이 부분에 대해선 나중에 등급(IM2)같은 것도 충족하는지 못하는지 확인하도록 수중 예정-->
+    <select id="selectMissingRequiredLanguages" resultMap="JobLanguageRowMap">
+        SELECT jlr.lang_type,
+               jlr.min_score,
+               jlr.min_grade
+        FROM job_language_requirement jlr
+        WHERE jlr.posting_id = #{postingId}
+          AND NOT EXISTS (
+              SELECT 1
+              FROM user_language_score uls
+              WHERE uls.spec_version_id = #{specVersionId}
+                AND uls.lang_type = jlr.lang_type
+                AND (
+                    (jlr.min_score IS NOT NULL AND uls.score IS NOT NULL AND uls.score >= jlr.min_score)
+                    OR
+                    (jlr.min_grade IS NOT NULL AND uls.grade IS NOT NULL AND uls.grade >= jlr.min_grade)
+                )
+          )
+    </select>
+    <!-- =====================================================
+         정성 분석용 쿼리
+    ====================================================== -->
+
+    <!-- 공고에 대해 사용자가 작성한 자소서 목록 (문항 + 답변) -->
+    <resultMap id="CoverLetterRowMap"
+               type="com.careerfit.backend.domain.analysis.mapper.AnalysisMapper$CoverLetterRow">
+        <result property="question" column="question"/>
+        <result property="content"  column="content"/>
+    </resultMap>
+
+    <select id="selectCoverLettersByPostingAndUser" resultMap="CoverLetterRowMap">
+        SELECT jpq.question,
+               cl.content
+        FROM cover_letter cl
+                 JOIN job_posting_question jpq ON cl.question_id = jpq.id
+        WHERE cl.posting_id = #{postingId}
+          AND cl.user_id    = #{userId}
+        ORDER BY jpq.sort_order ASC
+    </select>
+
+    <!-- 공고의 기업 인재상 + raw_text 조회 (정성 분석 컨텍스트) -->
+    <resultMap id="PostingContextRowMap"
+               type="com.careerfit.backend.domain.analysis.mapper.AnalysisMapper$PostingContextRow">
+        <result property="companyName" column="company_name"/>
+        <result property="title"       column="title"/>
+        <result property="talentImage" column="talent_image"/>
+        <result property="rawText"     column="raw_text"/>
+    </resultMap>
+
+    <select id="selectPostingContext" resultMap="PostingContextRowMap">
+        SELECT c.name as company_name,
+               jp.title,
+               c.talent_image,
+               jp.raw_text
+        FROM job_posting jp
+                 JOIN company c ON jp.company_id = c.id
+        WHERE jp.id = #{postingId}
+    </select>
+
+</mapper>

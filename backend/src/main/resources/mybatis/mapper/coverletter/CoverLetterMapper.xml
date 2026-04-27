@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.careerfit.backend.domain.coverletter.mapper.CoverLetterMapper">
+
+    <!-- =====================================================
+         ResultMap
+    ====================================================== -->
+    <resultMap id="CoverLetterResponseMap"
+               type="com.careerfit.backend.domain.coverletter.dto.CoverLetterResponse">
+        <id     property="id"              column="id"/>
+        <result property="postingId"       column="posting_id"/>
+        <result property="questionId"      column="question_id"/>
+        <result property="questionContent" column="question_content"/>
+        <result property="content"         column="content"/>
+        <result property="createdAt"       column="created_at"/>
+        <result property="updatedAt"       column="updated_at"/>
+    </resultMap>
+
+    <!-- =====================================================
+         INSERT
+    ====================================================== -->
+    <!-- 자소서 신규 저장 — useGeneratedKeys로 id 자동 주입 -->
+    <insert id="insert"
+            parameterType="com.careerfit.backend.domain.coverletter.entity.CoverLetter"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO cover_letter (user_id, posting_id, question_id, content, created_at, updated_at)
+        VALUES (#{userId}, #{postingId}, #{questionId}, #{content}, NOW(), NOW())
+    </insert>
+
+    <!-- =====================================================
+         UPDATE
+    ====================================================== -->
+    <!-- 자소서 본문 수정 — updated_at 갱신 포함, userId로 본인 소유 확인 -->
+    <update id="updateContent">
+        UPDATE cover_letter
+        SET content    = #{content},
+            updated_at = NOW()
+        WHERE id      = #{id}
+          AND user_id = #{userId}
+    </update>
+
+    <!-- =====================================================
+         SELECT
+    ====================================================== -->
+    <!-- 공고별 내 자소서 전체 조회 — 문항 내용 JOIN -->
+    <select id="selectByPostingId" resultMap="CoverLetterResponseMap">
+        SELECT cl.id,
+               cl.posting_id,
+               cl.question_id,
+               jpq.question AS question_content,
+               cl.content,
+               cl.created_at,
+               cl.updated_at
+        FROM cover_letter cl
+                 JOIN job_posting_question jpq ON cl.question_id = jpq.id
+        WHERE cl.user_id    = #{userId}
+          AND cl.posting_id = #{postingId}
+        ORDER BY jpq.sort_order ASC
+    </select>
+
+    <!-- 자소서 단건 조회 — 문항 내용 JOIN, userId로 본인 소유 확인 -->
+    <select id="selectById" resultMap="CoverLetterResponseMap">
+        SELECT cl.id,
+               cl.posting_id,
+               cl.question_id,
+               jpq.question AS question_content,
+               cl.content,
+               cl.created_at,
+               cl.updated_at
+        FROM cover_letter cl
+                 JOIN job_posting_question jpq ON cl.question_id = jpq.id
+        WHERE cl.id      = #{id}
+          AND cl.user_id = #{userId}
+    </select>
+
+    <!-- user_id + question_id 조합으로 기존 자소서 ID 조회 (upsert 판단용) -->
+    <select id="selectIdByUserAndQuestion" resultType="Long">
+        SELECT id
+        FROM cover_letter
+        WHERE user_id    = #{userId}
+          AND question_id = #{questionId}
+        LIMIT 1
+    </select>
+
+    <!-- =====================================================
+         DELETE
+    ====================================================== -->
+    <!-- 자소서 삭제 — userId 조건으로 본인 소유만 삭제 가능 -->
+    <delete id="delete">
+        DELETE
+        FROM cover_letter
+        WHERE id      = #{id}
+          AND user_id = #{userId}
+    </delete>
+
+</mapper>

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.careerfit.backend.domain.company.mapper.CompanySalaryMapper">
+
+    <!-- =====================================================
+         ResultMap — snake_case → camelCase 명시 매핑
+    ====================================================== -->
+    <resultMap id="CompanySalaryMap"
+               type="com.careerfit.backend.domain.company.entity.CompanySalary">
+        <id     property="id"           column="id"/>
+        <result property="companyId"    column="company_id"/>
+        <result property="salaryType"   column="salary_type"/>
+        <result property="amount"       column="amount"/>
+        <result property="year"         column="year"/>
+        <result property="source"       column="source"/>
+        <result property="sourceUrl"    column="source_url"/>
+        <result property="collectedAt"  column="collected_at"/>
+        <result property="createdAt"    column="created_at"/>
+    </resultMap>
+
+    <!-- =====================================================
+         기업별 최신 연도 연봉 조회
+
+         한 기업에 대해 (company_id, salary_type) 조합마다 MAX(year)인 row 1건씩 반환.
+         DISTINCT ON (PostgreSQL 방언) — 정렬 후 중복 그룹 첫 row만 선택.
+         UNIQUE 제약 uq_salary_per_year 덕에 (company_id, salary_type, year)는 단일 row.
+
+         결과: 최대 2건 (ENTRY, AVERAGE). 데이터 없는 타입은 결과에서 빠짐.
+    ====================================================== -->
+    <select id="selectLatestByCompanyId" resultMap="CompanySalaryMap">
+        SELECT DISTINCT ON (salary_type)
+               id,
+               company_id,
+               salary_type,
+               amount,
+               year,
+               source,
+               source_url,
+               collected_at,
+               created_at
+        FROM company_salary
+        WHERE company_id = #{companyId}
+        ORDER BY salary_type, year DESC
+    </select>
+
+    <!-- =====================================================
+         연봉 정보 UPSERT
+
+         (company_id, salary_type, year) 조합이 이미 존재하면 UPDATE,
+         없으면 INSERT. ON CONFLICT는 DB의 uq_salary_per_year 제약을 활용.
+
+         ── 왜 UPSERT를 쓰나 ────────────────────────────────────────────
+         동기화를 여러 번 실행해도 중복 row가 생기지 않도록 처리.
+         예: 2024년 평균 연봉 저장 후 재동기화 시 새 row 생성 안 하고 UPDATE만.
+
+         ── source_url, collected_at NULL 허용 ──────────────────────────
+         DART API 응답에 원본 URL이 없으므로 NULL로 저장.
+         나중에 사업보고서 URL을 직접 넣는 경우를 위해 ON CONFLICT에서도 포함.
+    ====================================================== -->
+    <insert id="upsertSalary" parameterType="com.careerfit.backend.domain.company.entity.CompanySalary">
+        INSERT INTO company_salary (company_id, salary_type, amount, year, source, source_url, collected_at)
+        VALUES (#{companyId}, #{salaryType}, #{amount}, #{year}, #{source}, #{sourceUrl}, #{collectedAt})
+        ON CONFLICT (company_id, salary_type, year)
+        DO UPDATE SET
+            amount       = EXCLUDED.amount,
+            source       = EXCLUDED.source,
+            source_url   = EXCLUDED.source_url,
+            collected_at = EXCLUDED.collected_at
+    </insert>
+
+</mapper>

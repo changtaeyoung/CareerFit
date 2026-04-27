@@ -86,7 +86,7 @@ careerfit/
 | ORM | MyBatis |
 | Auth | JWT (Access / Refresh Token) |
 | Database | PostgreSQL 15 |
-| Build | Maven |
+| Build | Gradle |
 
 ### Crawler — Python
 | 분류 | 기술 |
@@ -146,9 +146,6 @@ DART_API_KEY=your_dart_api_key
 # ALIO Open API  (https://www.alio.go.kr)
 ALIO_API_KEY=your_alio_api_key
 ```
-
-> ⚠️ `.env` 파일에는 실제 키 값이 들어갑니다. **절대 GitHub에 커밋하지 마세요.**
-> `.gitignore` 에 `.env` 가 포함되어 있는지 반드시 확인하세요.
 
 ### 3. Docker Compose 실행
 
@@ -230,7 +227,7 @@ data_pipeline_log       수집 로그
 | | |
 |--|--|
 | **이름** | 장태영 |
-| **포지션** | 백엔드 개발 (풀스택) |
-| **기술** | Java · Spring Boot · Python · React |
+| **포지션** | 백엔드 개발 |
+| **기술** | Java · Spring Boot · Python |
 
 ---

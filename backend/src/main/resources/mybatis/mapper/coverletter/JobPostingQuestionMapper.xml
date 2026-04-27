@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.careerfit.backend.domain.coverletter.mapper.JobPostingQuestionMapper">
+
+    <resultMap id="QuestionResultMap"
+               type="com.careerfit.backend.domain.coverletter.dto.JobPostingQuestionResponse">
+        <id     property="id"         column="id"/>
+        <result property="postingId"  column="posting_id"/>
+        <result property="question"   column="question"/>
+        <result property="sortOrder"  column="sort_order"/>
+        <result property="maxLength"  column="max_length"/>
+        <result property="lengthType" column="length_type"/>
+    </resultMap>
+
+    <!-- 공고별 문항 전체 조회 -->
+    <select id="selectByPostingId" resultMap="QuestionResultMap">
+        SELECT id, posting_id, question, sort_order, max_length, length_type
+        FROM job_posting_question
+        WHERE posting_id = #{postingId}
+        ORDER BY sort_order ASC
+    </select>
+
+    <!-- 문항 단건 조회 -->
+    <select id="selectById" resultMap="QuestionResultMap">
+        SELECT id, posting_id, question, sort_order, max_length, length_type
+        FROM job_posting_question
+        WHERE id = #{id}
+    </select>
+
+    <!-- 문항 등록 -->
+    <insert id="insert"
+            parameterType="com.careerfit.backend.domain.coverletter.entity.JobPostingQuestion"
+            useGeneratedKeys="true"
+            keyProperty="id">
+        INSERT INTO job_posting_question (posting_id, question, sort_order, created_at)
+        VALUES (#{postingId}, #{question}, #{sortOrder}, NOW())
+    </insert>
+
+    <!-- 문항 삭제 -->
+    <delete id="delete">
+        DELETE FROM job_posting_question
+        WHERE id = #{id}
+    </delete>
+
+</mapper>
