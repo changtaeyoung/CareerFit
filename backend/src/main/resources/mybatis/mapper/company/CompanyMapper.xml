@@ -157,6 +157,72 @@
         </where>
     </select>
 
+    <!-- DART 동기화용 쿼리
+    ====================================================== -->
+
+    <!-- dart_code가 없는(NULL) 기업 전체 조회 — 동기화 대상 선별 -->
+    <select id="selectCompaniesWithoutDartCode" resultMap="CompanyResultMap">
+        SELECT *
+        FROM company
+        WHERE dart_code IS NULL
+        ORDER BY id ASC
+    </select>
+
+    <!-- dart_code가 있는 기업만 조회 — empSttus 연봉 수집 대상 -->
+    <select id="selectCompaniesWithDartCode" resultMap="CompanyResultMap">
+        SELECT *
+        FROM company
+        WHERE dart_code IS NOT NULL
+        ORDER BY id ASC
+    </select>
+
+    <!-- =====================================================
+         ALIO 동기화용 쿼리
+    ====================================================== -->
+
+    <!-- alio_code가 없는 기업 조회 — ALIO 동기화 대상 -->
+    <select id="selectCompaniesWithoutAlioCode" resultMap="CompanyResultMap">
+        SELECT *
+        FROM company
+        WHERE alio_code IS NULL
+        ORDER BY id ASC
+    </select>
+
+    <!-- ALIO API 결과로 기관 정보 업데이트 -->
+    <update id="updateAlioInfo">
+        UPDATE company
+        SET alio_code        = #{alioCode},
+            employee_count   = COALESCE(#{employeeCount}, employee_count),
+            founded_year     = COALESCE(#{foundedYear},   founded_year),
+            business_overview= COALESCE(#{businessOverview}, business_overview),
+            updated_at       = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- Admin 수동 입력 — null 파라미터는 기존 값 유지 (COALESCE 패턴)
+         인재상/비전처럼 자동화 불가한 정성적 정보를 관리자가 직접 입력할 때 사용.
+         null인 필드는 기존 DB 값 그대로 유지 → PATCH 방식 구현. -->
+    <update id="updateCompanyInfo">
+        UPDATE company
+        SET vision            = COALESCE(#{vision},           vision),
+            talent_image      = COALESCE(#{talentImage},      talent_image),
+            business_overview = COALESCE(#{businessOverview}, business_overview),
+            employee_count    = COALESCE(#{employeeCount},    employee_count),
+            founded_year      = COALESCE(#{foundedYear},      founded_year),
+            website           = COALESCE(#{website},          website),
+            location          = COALESCE(#{location},         location),
+            updated_at        = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!-- DART 매칭 결과로 dart_code 업데이트 -->
+    <update id="updateDartCode">
+        UPDATE company
+        SET dart_code  = #{dartCode},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
     <!-- =====================================================
          채용공고 상세 조회 (url 포함, JobPostingResponse 재사용)
     ====================================================== -->

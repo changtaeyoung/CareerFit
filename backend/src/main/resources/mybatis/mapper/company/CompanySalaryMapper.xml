@@ -45,4 +45,29 @@
         ORDER BY salary_type, year DESC
     </select>
 
+    <!-- =====================================================
+         연봉 정보 UPSERT
+
+         (company_id, salary_type, year) 조합이 이미 존재하면 UPDATE,
+         없으면 INSERT. ON CONFLICT는 DB의 uq_salary_per_year 제약을 활용.
+
+         ── 왜 UPSERT를 쓰나 ────────────────────────────────────────────
+         동기화를 여러 번 실행해도 중복 row가 생기지 않도록 처리.
+         예: 2024년 평균 연봉 저장 후 재동기화 시 새 row 생성 안 하고 UPDATE만.
+
+         ── source_url, collected_at NULL 허용 ──────────────────────────
+         DART API 응답에 원본 URL이 없으므로 NULL로 저장.
+         나중에 사업보고서 URL을 직접 넣는 경우를 위해 ON CONFLICT에서도 포함.
+    ====================================================== -->
+    <insert id="upsertSalary" parameterType="com.careerfit.backend.domain.company.entity.CompanySalary">
+        INSERT INTO company_salary (company_id, salary_type, amount, year, source, source_url, collected_at)
+        VALUES (#{companyId}, #{salaryType}, #{amount}, #{year}, #{source}, #{sourceUrl}, #{collectedAt})
+        ON CONFLICT (company_id, salary_type, year)
+        DO UPDATE SET
+            amount       = EXCLUDED.amount,
+            source       = EXCLUDED.source,
+            source_url   = EXCLUDED.source_url,
+            collected_at = EXCLUDED.collected_at
+    </insert>
+
 </mapper>
