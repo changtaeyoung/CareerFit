@@ -20,6 +20,9 @@
         <result property="totalScore"         column="total_score"/>
         <result property="status"             column="status"/>
         <result property="createdAt"          column="created_at"/>
+        <result property="strengths"          column="strengths"/>
+        <result property="weaknesses"         column="weaknesses"/>
+        <result property="aiFeedback"         column="ai_feedback"/>
     </resultMap>
 
     <resultMap id="GapResultMap" type="com.careerfit.backend.domain.analysis.entity.AnalysisGap">
@@ -100,7 +103,7 @@
         WHERE jp.id = #{jobPostingId}
     </insert>
 
-    <!-- 분석 완료 후 점수와 상태를 업데이트 -->
+    <!-- 분석 완료 후 점수, 상태, AI 피드백을 업데이트 -->
     <update id="updateReportResult">
         UPDATE analysis_report
         SET required_all_met    = #{requiredAllMet},
@@ -108,7 +111,10 @@
             quantitative_bonus  = #{quantitativeBonus},
             qualitative_bonus   = #{qualitativeBonus},
             total_score         = #{totalScore},
-            status              = #{status}
+            status              = #{status},
+            strengths           = #{strengths},
+            weaknesses          = #{weaknesses},
+            ai_feedback         = #{aiFeedback}
         WHERE id = #{reportId}
     </update>
 
@@ -256,6 +262,45 @@
                     (jlr.min_grade IS NOT NULL AND uls.grade IS NOT NULL AND uls.grade >= jlr.min_grade)
                 )
           )
+    </select>
+    <!-- =====================================================
+         정성 분석용 쿼리
+    ====================================================== -->
+
+    <!-- 공고에 대해 사용자가 작성한 자소서 목록 (문항 + 답변) -->
+    <resultMap id="CoverLetterRowMap"
+               type="com.careerfit.backend.domain.analysis.mapper.AnalysisMapper$CoverLetterRow">
+        <result property="question" column="question"/>
+        <result property="content"  column="content"/>
+    </resultMap>
+
+    <select id="selectCoverLettersByPostingAndUser" resultMap="CoverLetterRowMap">
+        SELECT jpq.question,
+               cl.content
+        FROM cover_letter cl
+                 JOIN job_posting_question jpq ON cl.question_id = jpq.id
+        WHERE cl.posting_id = #{postingId}
+          AND cl.user_id    = #{userId}
+        ORDER BY jpq.sort_order ASC
+    </select>
+
+    <!-- 공고의 기업 인재상 + raw_text 조회 (정성 분석 컨텍스트) -->
+    <resultMap id="PostingContextRowMap"
+               type="com.careerfit.backend.domain.analysis.mapper.AnalysisMapper$PostingContextRow">
+        <result property="companyName" column="company_name"/>
+        <result property="title"       column="title"/>
+        <result property="talentImage" column="talent_image"/>
+        <result property="rawText"     column="raw_text"/>
+    </resultMap>
+
+    <select id="selectPostingContext" resultMap="PostingContextRowMap">
+        SELECT c.name as company_name,
+               jp.title,
+               c.talent_image,
+               jp.raw_text
+        FROM job_posting jp
+                 JOIN company c ON jp.company_id = c.id
+        WHERE jp.id = #{postingId}
     </select>
 
 </mapper>

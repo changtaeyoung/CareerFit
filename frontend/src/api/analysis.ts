@@ -39,6 +39,10 @@ export interface AnalysisReportResponse {
     createdAt: string;
     gaps: AnalysisGap[];
     recommendations: AnalysisRecommendation[];
+    // AI 정성 평가 피드백
+    strengths: string[];
+    weaknesses: string[];
+    aiFeedback: string | null;
 }
 
 export interface AnalysisHistoryResponse {

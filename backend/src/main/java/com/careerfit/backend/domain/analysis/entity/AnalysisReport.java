@@ -23,4 +23,9 @@ public class AnalysisReport {
 
     private String status;           // PENDING / COMPLETED / FAILED
     private LocalDateTime createdAt;
+
+    // AI 정성 평가 결과 (JSON String으로 DB 저장, 앱 레이어에서 List<String>으로 파싱)
+    private String strengths;    // 강점 목록 JSON. 예: ["강점1","강점2"]
+    private String weaknesses;   // 약점/개선점 목록 JSON
+    private String aiFeedback;   // GPT 종합 피드백 텍스트
 }

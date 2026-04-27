@@ -16,14 +16,17 @@ public interface AnalysisMapper {
     // 분석 리포트 저장 (useGeneratedKeys로 id 자동 주입)
     void insertReport(AnalysisReport report);
 
-    // 분석 완료 후 status + 점수 업데이트
+    // 분석 완료 후 status + 점수 + AI 피드백 업데이트
     void updateReportResult(@Param("reportId") Long reportId,
                             @Param("requiredAllMet") boolean requiredAllMet,
                             @Param("baseScore") int baseScore,
                             @Param("quantitativeBonus") int quantitativeBonus,
                             @Param("qualitativeBonus") int qualitativeBonus,
                             @Param("totalScore") int totalScore,
-                            @Param("status") String status);
+                            @Param("status") String status,
+                            @Param("strengths") String strengths,
+                            @Param("weaknesses") String weaknesses,
+                            @Param("aiFeedback") String aiFeedback);
 
     // 히스토리 목록 조회 (기업명, 공고제목 JOIN)
     List<AnalysisHistoryResponse> selectHistoryByUserId(@Param("userId") Long userId);
@@ -69,6 +72,13 @@ public interface AnalysisMapper {
     List<JobLanguageRow> selectMissingRequiredLanguages(@Param("postingId") Long postingId,
                                                         @Param("specVersionId") Long specVersionId);
 
+    // 정성 분석용 — 공고에 작성된 사용자 자소서 목록 조회 (문항 + 답변)
+    List<CoverLetterRow> selectCoverLettersByPostingAndUser(@Param("postingId") Long postingId,
+                                                            @Param("userId") Long userId);
+
+    // 정성 분석용 — 공고의 기업 인재상 + raw_text 조회
+    PostingContextRow selectPostingContext(@Param("postingId") Long postingId);
+
     // ── 내부 결과 row 클래스 ───────────────────────────────
     // job_required_cert + cert_dictionary JOIN 결과
     @lombok.Getter @lombok.Builder
@@ -92,5 +102,21 @@ public interface AnalysisMapper {
         private String langType;
         private Integer minScore;
         private String minGrade;
+    }
+
+    // 정성 분석용 — 자소서 문항 + 답변
+    @lombok.Getter @lombok.Builder
+    class CoverLetterRow {
+        private String question;   // job_posting_question.question
+        private String content;    // cover_letter.content
+    }
+
+    // 정성 분석용 — 공고 컨텍스트 (인재상 + 직무내용)
+    @lombok.Getter @lombok.Builder
+    class PostingContextRow {
+        private String companyName;
+        private String title;
+        private String talentImage;      // company.talent_image
+        private String rawText;          // job_posting.raw_text (공고 직무 내용)
     }
 }

@@ -16,6 +16,21 @@ import com.careerfit.backend.domain.user.entity.UserCertificate;
 import com.careerfit.backend.domain.user.entity.UserLanguageScore;
 import com.careerfit.backend.domain.user.entity.UserSkill;
 import com.careerfit.backend.domain.user.mapper.UserMapper;
+import com.careerfit.backend.infrastructure.external.ai.AiAnalysisClient;
+import com.careerfit.backend.infrastructure.external.ai.dto.QualitativeRequest;
+import com.careerfit.backend.infrastructure.external.ai.dto.QualitativeResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,6 +50,8 @@ public class AnalysisService {
 
     private final AnalysisMapper analysisMapper;
     private final UserMapper userMapper;
+    private final AiAnalysisClient aiAnalysisClient;
+    private final ObjectMapper objectMapper;  // List<String> ↔ JSON String 변환용
 
     // 점수 상수
     private static final int BASE_SCORE          = 10;
@@ -148,10 +165,10 @@ public class AnalysisService {
                 // 필수 미충족 → 0점으로 즉시 완료
                 saveGapsAndRecommendations(gaps, recommendations);
                 analysisMapper.updateReportResult(
-                        reportId, false, 0, 0, 0, 0, "COMPLETED");
+                        reportId, false, 0, 0, 0, 0, "COMPLETED", null, null, null);
                 log.info("[AnalysisService] 필수 게이트 FAIL - reportId: {}", reportId);
-                return buildResponse(
-                        reportId, 0, 0, 0, 0, false, gaps, recommendations);
+                return buildResponse(reportId, 0, 0, 0, 0, false, gaps, recommendations,
+                        List.of(), List.of(), null);
             }
 
             // ── 2단계: 정량 점수 계산 ────────────────────────────────────────
@@ -161,20 +178,31 @@ public class AnalysisService {
 
             int quantitativeBonus = certBonus + languageBonus + skillBonus;
 
-            // ── 3단계: 정성 가점 (FastAPI stub — 항상 0) ─────────────────────
-            int qualitativeBonus = 0;
+            // ── 3단계: 정성 가점 (FastAPI 연동) ─────────────────────────
+            QualitativeResponse qualitativeResult = callQualitativeAnalysis(userId, jobPostingId);
+            int qualitativeBonus = qualitativeResult.getTotalScore();
+
+            // List<String> → JSON String 직렬화 (DB TEXT 저장용)
+            String strengthsJson   = toJsonString(qualitativeResult.getStrengths());
+            String weaknessesJson  = toJsonString(qualitativeResult.getWeaknesses());
+            String aiFeedback      = qualitativeResult.getFeedback();
 
             int totalScore = BASE_SCORE + quantitativeBonus + qualitativeBonus;
 
             saveGapsAndRecommendations(gaps, recommendations);
             analysisMapper.updateReportResult(
-                    reportId, true, BASE_SCORE, quantitativeBonus, qualitativeBonus, totalScore, "COMPLETED");
+                    reportId, true, BASE_SCORE, quantitativeBonus, qualitativeBonus,
+                    totalScore, "COMPLETED", strengthsJson, weaknessesJson, aiFeedback);
 
             log.info("[AnalysisService] 분석 완료 - reportId: {}, totalScore: {}", reportId, totalScore);
-            return buildResponse(reportId, BASE_SCORE, quantitativeBonus, qualitativeBonus, totalScore, true, gaps, recommendations);
+            return buildResponse(reportId, BASE_SCORE, quantitativeBonus, qualitativeBonus, totalScore,
+                    true, gaps, recommendations,
+                    qualitativeResult.getStrengths(),
+                    qualitativeResult.getWeaknesses(),
+                    aiFeedback);
 
         } catch (Exception e) {
-            analysisMapper.updateReportResult(reportId, false, 0, 0, 0, 0, "FAILED");
+            analysisMapper.updateReportResult(reportId, false, 0, 0, 0, 0, "FAILED", null, null, null);
             log.error("[AnalysisService] 분석 실패 - reportId: {}, error: {}", reportId, e.getMessage());
             throw new CustomException(ErrorCode.ANALYSIS_FAILED);
         }
@@ -211,6 +239,10 @@ public class AnalysisService {
                 .createdAt(report.getCreatedAt())
                 .gaps(gaps)
                 .recommendations(recommendations)
+                // DB JSON String → List<String> 파싱
+                .strengths(AnalysisReportResponse.parseJsonArray(report.getStrengths()))
+                .weaknesses(AnalysisReportResponse.parseJsonArray(report.getWeaknesses()))
+                .aiFeedback(report.getAiFeedback())
                 .build();
     }
 
@@ -489,11 +521,60 @@ public class AnalysisService {
         recommendations.forEach(analysisMapper::insertRecommendation);
     }
 
-    // AnalysisReportResponse를 조립해서 반환하는 헬퍼 (분석 직후 호출용 — DB 재조회 없이 조립)
+    // ── 정성 분석 ────────────────────────────────────────────────────────────
+    // 자소서가 있으면 FastAPI에 정성 분석 요청, 없으면 빈 응답(0점) 반환
+    private QualitativeResponse callQualitativeAnalysis(Long userId, Long jobPostingId) {
+        try {
+            List<AnalysisMapper.CoverLetterRow> coverLetters =
+                    analysisMapper.selectCoverLettersByPostingAndUser(jobPostingId, userId);
+
+            if (coverLetters.isEmpty()) {
+                log.info("[AnalysisService] 자소서 없음 — 정성 가점 0점");
+                return QualitativeResponse.empty("자소서가 작성되지 않아 정성 평가를 진행할 수 없습니다.");
+            }
+
+            AnalysisMapper.PostingContextRow context = analysisMapper.selectPostingContext(jobPostingId);
+
+            List<QualitativeRequest.CoverLetterItem> items = coverLetters.stream()
+                    .map(cl -> QualitativeRequest.CoverLetterItem.builder()
+                            .question(cl.getQuestion())
+                            .content(cl.getContent())
+                            .build())
+                    .toList();
+
+            QualitativeRequest request = QualitativeRequest.builder()
+                    .talent_image(context != null ? context.getTalentImage() : null)
+                    .job_description(context != null ? context.getRawText() : null)
+                    .cover_letters(items)
+                    .build();
+
+            QualitativeResponse response = aiAnalysisClient.analyzeQualitative(request);
+            log.info("[AnalysisService] 정성 분석 완료 — 점수: {}점", response.getTotalScore());
+            return response;
+
+        } catch (Exception e) {
+            log.warn("[AnalysisService] 정성 분석 중 예외 발생 — 0점 처리: {}", e.getMessage());
+            return QualitativeResponse.empty("정성 분석 중 오류가 발생했습니다.");
+        }
+    }
+
+    // List<String>을 JSON String으로 직렬화 (DB TEXT 저장용)
+    private String toJsonString(List<String> list) {
+        if (list == null || list.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            log.warn("[AnalysisService] JSON 직렬화 실패: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    // AnalysisReportResponse 조립 헬퍼 — AI 피드백 포함
     private AnalysisReportResponse buildResponse(
             Long reportId, int baseScore, int quantitativeBonus, int qualitativeBonus,
             int totalScore, boolean requiredAllMet,
-            List<AnalysisGap> gaps, List<AnalysisRecommendation> recommendations) {
+            List<AnalysisGap> gaps, List<AnalysisRecommendation> recommendations,
+            List<String> strengths, List<String> weaknesses, String aiFeedback) {
         return AnalysisReportResponse.builder()
                 .reportId(reportId)
                 .requiredAllMet(requiredAllMet)
@@ -501,10 +582,13 @@ public class AnalysisService {
                 .quantitativeBonus(quantitativeBonus)
                 .qualitativeBonus(qualitativeBonus)
                 .totalScore(totalScore)
-                .status(requiredAllMet ? "COMPLETED" : "COMPLETED")
+                .status("COMPLETED")
                 .createdAt(LocalDateTime.now())
                 .gaps(gaps)
                 .recommendations(recommendations)
+                .strengths(strengths != null ? strengths : List.of())
+                .weaknesses(weaknesses != null ? weaknesses : List.of())
+                .aiFeedback(aiFeedback)
                 .build();
     }
 }

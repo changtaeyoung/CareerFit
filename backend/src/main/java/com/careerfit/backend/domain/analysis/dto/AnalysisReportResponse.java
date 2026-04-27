@@ -2,6 +2,8 @@ package com.careerfit.backend.domain.analysis.dto;
 
 import com.careerfit.backend.domain.analysis.entity.AnalysisGap;
 import com.careerfit.backend.domain.analysis.entity.AnalysisRecommendation;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
@@ -56,4 +58,30 @@ public class AnalysisReportResponse {
     // ── 액션 플랜 ──────────────────────────────────────────
     @Schema(description = "우선순위별 액션 플랜 (P1→P2→P3 순)")
     private List<AnalysisRecommendation> recommendations;
+
+    // ── AI 정성 평가 피드백 ────────────────────────────────
+    @Schema(description = "AI가 분석한 자소서 강점 목록", example = "[\"구체적인 경험 서술\", \"높은 직무 이해도\"]")
+    private List<String> strengths;
+
+    @Schema(description = "AI가 분석한 자소서 약점/개선점 목록", example = "[\"인재상 키워드 부족\"]")
+    private List<String> weaknesses;
+
+    @Schema(description = "AI 종합 피드백", example = "전반적으로 직무 이해도가 높으나 기업 인재상 연결이 부족합니다.")
+    private String aiFeedback;
+
+    // ── DB JSON String → List<String> 파싱 유틸 ──────────────
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /**
+     * DB에 TEXT로 저장된 JSON 배열 문자열을 List<String>으로 변환.
+     * 파싱 실패 시 빈 리스트 반환 (방어적 처리).
+     */
+    public static List<String> parseJsonArray(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return MAPPER.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
 }
