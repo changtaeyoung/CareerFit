@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     PenLine, Trash2, Save,
-    Building2, FileText, Type, BarChart3
+    Building2, FileText, Type, BarChart3, AlertCircle
 } from 'lucide-react';
 import { getPostings } from '../api/company';
 import type { JobPostingResponse } from '../api/company';
@@ -126,8 +126,19 @@ export default function CoverLetters() {
         }
     };
 
-    const charCount = (text: string) => (text || '').replace(/\s/g, '').length;
-
+    const calculateLength = (text: string, type?: 'CHAR' | 'BYTE') => {
+        if (!text) return 0;
+        if (type === 'BYTE') {
+            let bytes = 0;
+            for (let i = 0; i < text.length; i++) {
+                const charCode = text.charCodeAt(i);
+                if (charCode <= 0x00007F) bytes += 1;
+                else bytes += 2; // 한글 등은 2바이트로 계산
+            }
+            return bytes;
+        }
+        return text.replace(/\s/g, '').length; // CHAR 기준 (공백 제외 글자수)
+    };
     // 특정 문항에 이미 저장된 답변이 있는지
     const getLetterForQuestion = (questionId: number) =>
         letters.find((l) => l.questionId === questionId);
@@ -241,20 +252,28 @@ export default function CoverLetters() {
                                                     {/* 답변 입력 */}
                                                     <div>
                                                         <div className="flex items-center justify-end mb-1">
+                                                            {calculateLength(draft, q.lengthType) > (q.maxLength || 1000) && (
+                                                                <span className="text-xs font-medium text-red-500 mr-2 flex items-center">
+                                                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                                                    제한을 초과했습니다
+                                                                </span>
+                                                            )}
                                                             <span className={`text-xs font-medium ${
-                                                                charCount(draft) > 500
+                                                                calculateLength(draft, q.lengthType) > (q.maxLength || 1000)
                                                                     ? 'text-red-500'
                                                                     : 'text-surface-400 dark:text-surface-500'
                                                             }`}>
                                                                 <Type className="w-3 h-3 inline mr-1" />
-                                                                {charCount(draft)}자 (공백 제외)
+                                                                {calculateLength(draft, q.lengthType)} / {q.maxLength || 1000}{q.lengthType === 'BYTE' ? '바이트' : '자 (공백 제외)'}
                                                             </span>
                                                         </div>
                                                         <textarea
                                                             value={draft}
                                                             onChange={(e) => handleDraftChange(q.id, e.target.value)}
                                                             rows={6}
-                                                            className="input-field resize-none"
+                                                            className={`input-field resize-none ${
+                                                                calculateLength(draft, q.lengthType) > (q.maxLength || 1000) ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''
+                                                            }`}
                                                             placeholder="자기소개서 내용을 작성하세요..."
                                                         />
                                                     </div>

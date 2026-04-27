@@ -20,4 +20,10 @@ public class JobPostingQuestionResponse {
 
     @Schema(description = "문항 순서", example = "1")
     private Integer sortOrder;
+
+    @Schema(description = "최대 글자수/바이트수 제한", example = "1000")
+    private Integer maxLength;
+
+    @Schema(description = "제한 기준 (CHAR 또는 BYTE)", example = "CHAR")
+    private String lengthType;
 }

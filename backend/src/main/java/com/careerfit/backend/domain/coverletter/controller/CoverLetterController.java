@@ -4,6 +4,8 @@ import com.careerfit.backend.common.jwt.CustomUserDetails;
 import com.careerfit.backend.common.response.ApiResponse;
 import com.careerfit.backend.domain.coverletter.dto.CoverLetterRequest;
 import com.careerfit.backend.domain.coverletter.dto.CoverLetterResponse;
+import com.careerfit.backend.domain.coverletter.dto.JobPostingQuestionResponse;
+import com.careerfit.backend.domain.coverletter.mapper.JobPostingQuestionMapper;
 import com.careerfit.backend.domain.coverletter.service.CoverLetterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +25,7 @@ import java.util.List;
 public class CoverLetterController {
 
     private final CoverLetterService coverLetterService;
+    private final JobPostingQuestionMapper questionMapper;
 
     // 자기소개서를 저장, 동일 문항에 이미 작성된 내용이 있으면 자동으로 수정 - upsert 방식 이용
     @Operation(
@@ -38,6 +41,18 @@ public class CoverLetterController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("자기소개서가 저장되었습니다", response));
+    }
+
+    // 공고별 자소서 문항 목록 조회 (사용자용)
+    @Operation(
+            summary = "공고별 자소서 문항 조회",
+            description = "해당 공고에 등록된 자소서 문항 목록. 사용자는 이 문항을 선택해서 자소서 작성"
+    )
+    @GetMapping("/questions")
+    public ResponseEntity<ApiResponse<List<JobPostingQuestionResponse>>> getQuestions(
+            @RequestParam Long postingId) {
+        List<JobPostingQuestionResponse> questions = questionMapper.selectByPostingId(postingId);
+        return ResponseEntity.ok(ApiResponse.success(questions));
     }
 
     // 특정 공고에 대해 내가 작성한 자소서 전체 목록을 문항 내용과 함께 반환
