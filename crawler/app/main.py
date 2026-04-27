@@ -5,6 +5,8 @@
 from fastapi import FastAPI
 from app.config import settings
 from app.api.health import router as health_router
+from app.api.crawl import router as crawl_router
+from app.api.analysis import router as analysis_router
 import logging
 
 
@@ -23,8 +25,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# 라우터 등록 (Spring Boot의 @ComponentScan 역할)
+# 라우터 등록
 app.include_router(health_router)
+app.include_router(crawl_router)
+app.include_router(analysis_router)
 
 
 # 루트 엔드포인트
